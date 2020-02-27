@@ -238,7 +238,7 @@ public:
 	virtual ~rdv_2();
 
 	rdv2::config_base& conf() const { return *_conf; }
-	void startup(uint64_t time_out_ms = 5000);
+	bool startup(uint64_t time_out_ms = 5000, bool retry = true);
 
 public: // APIs
 	bool enable_tick(); // enable tick callback
@@ -338,7 +338,7 @@ public: // APIs
 	std::map<std::string, Type2_component*> parse_data(std::string file, const char* parent);
 
 private:
-	void _create_vdr(uint64_t time_out_ms);
+	bool _create_vdr(uint64_t time_out_ms, bool retry);
 
 	/*
 	** name is doesn't matter, can be anything

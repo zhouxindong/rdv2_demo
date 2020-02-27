@@ -62,16 +62,36 @@ int main()
 	//rdv_2 rdv(ConfigMode::ini, "myconfig.ini");
 	//rdv_2 rdv(ConfigMode::xml, "myconfig.xml");
 
-	my_rdv rdv;
 	// 在连接VDR前，可以修改配置项
 	//rdv.conf().set<string>(ConfigItem::VDR_group_ip, string("224.0.0.100"));
-	rdv.startup();
+	
+	my_rdv rdv;
+	if (!rdv.startup(3000, false))
+	{
+		std::cout << "VDR not exist!\n";
+		system("pause");
+		return 0;
+	}
+
 	rdv.enable_tick();
-
-
-
-
 	system("pause");
-    return 0;
+	return 0;
+
+
+	//try { // 测试配置文件不存在
+	//	my_rdv rdv;
+	//	rdv.startup();
+	//	rdv.enable_tick();
+	//	system("pause");
+	//	return 0;
+
+	//}
+	//catch (std::exception e)
+	//{
+	//	std::cout << e.what() << '\n';
+	//	system("pause");
+	//	return 0;
+	//}
+
 }
 

@@ -18,3 +18,8 @@
 
 2020-02-20
 1. 基于VDR v1.20200210版本构建
+
+2020-02-27
+1. 修改startup函数规格，添加是否重连参数。如果用户调用传入false，且VDR服务不可用，
+    startup返回false。
+2. 修改xml_config_load_error异常类，派生于std::exception。

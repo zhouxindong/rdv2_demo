@@ -181,9 +181,20 @@ class xml_config : public config_base {
 	using element = tinyxml2::XMLElement;
 
 public:
-	class xml_config_load_error {};
+	class xml_config_load_error : public std::exception 
+	{
+	public:
+		xml_config_load_error(char const* const _Message = "xml_config_load_error") :
+			std::exception(_Message) {}
+	};
+
 	xml_config(const char* file = "rdv2_config.xml") : _tiw(file) {	
-		if (!_tiw.get_ready()) throw xml_config_load_error();
+		if (!_tiw.get_ready())
+		{
+			std::ostringstream oss;
+			oss << std::string("load ") << file << std::string(" error");
+			throw xml_config_load_error(oss.str().c_str());
+		}
 
 		std::vector<element*> ids = _tiw.all("ID");
 		for_each(ids.cbegin(), ids.cend(),
