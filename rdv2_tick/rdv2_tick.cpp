@@ -74,6 +74,15 @@ int main()
 	}
 
 	rdv.enable_tick();
+	rdv.enable_tick();
+	std::cout << "press any key to disable tick call back\n";
+	std::cin.get();
+	rdv.disable_tick();
+	rdv.disable_tick();
+	std::cout << "press any key to enable tick again\n";
+	std::cin.get();
+	rdv.enable_tick();
+
 	system("pause");
 	return 0;
 

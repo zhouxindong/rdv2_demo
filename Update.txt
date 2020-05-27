@@ -23,3 +23,7 @@
 1. 修改startup函数规格，添加是否重连参数。如果用户调用传入false，且VDR服务不可用，
     startup返回false。
 2. 修改xml_config_load_error异常类，派生于std::exception。
+
+2020-03-06
+1. 增加disable_tick()，关闭时钟回调，之后可以再enable_tick()启用时钟回调
+2. 增加rdv析构标识，在rdv析构期间，所有针对VDR的调用都不做处理

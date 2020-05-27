@@ -242,6 +242,8 @@ public:
 
 public: // APIs
 	bool enable_tick(); // enable tick callback
+	void disable_tick();
+
 	/*
 	** data set
 	*/
@@ -398,9 +400,11 @@ private: // object states
 	rdv2::config_base* _conf;
 	bool _delete_ds_quit;
 	bool _ticked{ false };
+	bool _disable_tick{ false };
 	bool _listen_cmd{ false };
 	int _step{ 1 };
 	bool _ready{ false };
+	bool _destroying{ false };
 
 	std::set<std::string> _data_sets;
 	std::set<std::string> _nodes;
@@ -413,6 +417,15 @@ private:
 	std::string __ticker{ "__INNER_TICK__" };
 	std::string __watcher{ "__INNER_WATCH__" };
 	std::string __cmder{ "__CTL_CMD__" };
+
+private:
+	void on_tick_(const ssa::xmMSGTimerClick& t)
+	{
+		if (_disable_tick || _destroying)
+			return;
+
+		on_tick(t);
+	}
 
 public: // VDR message handle
 	virtual void on_tick(const ssa::xmMSGTimerClick& t) {}
@@ -442,6 +455,7 @@ template<typename _Tx>
 inline std::pair<bool, _Tx> rdv_2::get_value(const std::string & name)
 {
 	_assert_ready();
+	if (_destroying) return std::make_pair(false, _Tx());
 	return _get_value<_Tx>(name, _get_read_ap());
 }
 
@@ -449,6 +463,7 @@ template<typename _Tx>
 inline std::pair<bool, _Tx> rdv_2::get_value_n(const std::string & name, const std::string & n_name)
 {
 	_assert_ready();
+	if (_destroying) return std::make_pair(false, _Tx());
 	return _get_value<_Tx>(name, _get_node_ap(n_name));
 }
 
@@ -456,6 +471,7 @@ template<typename _Tx>
 inline bool rdv_2::get_value(const std::string & name, _Tx & val)
 {
 	_assert_ready();
+	if (_destroying) return false;
 	return _get_value(name, _get_read_ap(), val);
 }
 
@@ -463,6 +479,7 @@ template<typename _Tx>
 inline bool rdv_2::get_value_n(const std::string & name, const std::string & n_name, _Tx & val)
 {
 	_assert_ready();
+	if (_destroying) return false;
 	return _get_value(name, _get_node_ap(n_name), val);
 }
 
@@ -470,6 +487,7 @@ template<typename _Tx>
 inline bool rdv_2::set_value(const std::string & name, const _Tx & val)
 {
 	_assert_ready();
+	if (_destroying) return false;
 	try
 	{
 		ssa::xmAccessPoint* ap = attach(name, false);
@@ -485,6 +503,7 @@ template<typename _Tx>
 inline bool rdv_2::set_value_n(const std::string & name, const std::string & n_name, const _Tx & val)
 {
 	_assert_ready();
+	if (_destroying) return false;
 	return _set_value(name, _get_node_ap(n_name), val);
 }
 
