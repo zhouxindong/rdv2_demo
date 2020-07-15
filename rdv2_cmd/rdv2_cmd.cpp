@@ -47,16 +47,62 @@ public:
 	}
 };
 
+// 1. add command data and watched 
+//int main()
+//{
+//	my_rdv rdv;
+//	rdv.startup();
+//
+//	rdv.register_cmd("运行控制指令测试数据集");
+//	_SPIN_LOCK.test_and_set();
+//	thread t_send(send_proc, &rdv); 
+//
+//	rdv.listen_cmd(true);
+//
+//	cout << "Press any key to quit!" << endl;
+//	cin.get();
+//
+//	_SPIN_LOCK.clear();
+//	t_send.join();
+//
+//	return 0;
+//}
+
+// 2. watch command but not add command data before
+//int main()
+//{
+//	my_rdv rdv;
+//	rdv.startup();
+//
+//	//rdv.register_cmd("运行控制指令测试数据集");
+//	_SPIN_LOCK.test_and_set();
+//	thread t_send(send_proc, &rdv);
+//
+//	rdv.listen_cmd(true);
+//
+//	cout << "Press any key to quit!" << endl;
+//	cin.get();
+//
+//	_SPIN_LOCK.clear();
+//	t_send.join();
+//
+//	return 0;
+//}
+
+// 3. watch command first, and then add command data to VDR
 int main()
 {
 	my_rdv rdv;
 	rdv.startup();
 
+	rdv.listen_cmd(true);
+
+	cout << "press any key to add command data to VDR\n";
+	cin.get();
+
 	rdv.register_cmd("运行控制指令测试数据集");
 	_SPIN_LOCK.test_and_set();
-	thread t_send(send_proc, &rdv); 
-
-	rdv.listen_cmd(true);
+	thread t_send(send_proc, &rdv);
 
 	cout << "Press any key to quit!" << endl;
 	cin.get();
@@ -66,4 +112,3 @@ int main()
 
 	return 0;
 }
-

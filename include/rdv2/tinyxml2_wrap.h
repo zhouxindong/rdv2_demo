@@ -1,14 +1,15 @@
+
 #pragma once
 #ifndef _RDV2_TINYXML2_WRAP_H_
 #define _RDV2_TINYXML2_WRAP_H_
 
 #include "zvals.h"
-#include "tinyxml2.h"
+#include "tinyxml2.hpp"
 #include <vector>
 
 _RDV2_BEGIN
 
-using element = tinyxml2::XMLElement;
+using element = guru::XMLElement;
 
 class tinyxml2_wrap {
 
@@ -19,12 +20,12 @@ public:
 
 	tinyxml2_wrap(const char* file) {
 		auto load = _doc.LoadFile(file);
-		_ready = (load == tinyxml2::XML_SUCCESS);
+		_ready = (load == guru::XML_SUCCESS);
 	}
 
-	tinyxml2::XMLError parse(const char* xml) {
+	guru::XMLError parse(const char* xml) {
 		auto parsed = _doc.Parse(xml);
-		_ready = (parsed == tinyxml2::XML_SUCCESS);
+		_ready = (parsed == guru::XML_SUCCESS);
 		return parsed;
 	}
 
@@ -103,7 +104,7 @@ private:
 	}
 
 private:
-	tinyxml2::XMLDocument _doc;
+	guru::XMLDocument _doc;
 	std::vector<element*> _vec;
 };
 

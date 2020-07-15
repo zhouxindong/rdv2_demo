@@ -66,7 +66,7 @@ static std::map<ssa::xmEDataType, std::string> xmEDataType2Text
 class RDV2_API Type2_component
 {
 public:
-	using element = tinyxml2::XMLElement;
+	using element = guru::XMLElement;
 
 	Type2_component(const std::string name, const ssa::xmEDataType dt) :
 		_name(name), _type(dt) {}
@@ -185,7 +185,7 @@ private:
 class RDV2_API cust_parser
 {
 public:
-	using element = tinyxml2::XMLElement;
+	using element = guru::XMLElement;
 
 	std::map<std::string, Type2_component*>	parse_class_type(tinyxml2_wrap& tw);
 	std::map<std::string, Type2_component*> parse_data_type(tinyxml2_wrap& tw, const char* parent = OUTPUT_DATA_LABEL);
@@ -307,14 +307,15 @@ public: // APIs
 	/*
 	** watch
 	*/
-	bool watch(std::string d, ssa::xmEDataType dt, valuer cb);
+	bool watch(std::string d, ssa::xmEDataType dt, valuer cb, bool check_exist = false);
 	void unwatch(std::string d);
 	void dispatch(std::initializer_list<std::string> l);
 
 	/*
 	** ctl_cmd
 	*/
-	bool listen_cmd(bool b);
+	bool listen_cmd(bool enable, bool check_cmd_exists = false);
+	bool listen_cmd2(bool enable, bool check_cmd_exists = false);
 	virtual void on_load() {}
 	virtual void on_init() {}
 	virtual void on_start() {}

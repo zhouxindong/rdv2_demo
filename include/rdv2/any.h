@@ -26,8 +26,8 @@ public:
 	any(any const& value) : _value(value._value->clone()) {
 	}
 
-	//any(any& value) : _value(value._value->clone()) {
-	//}
+	any(any& value) : _value(value._value->clone()) {
+	}
 
 	template<typename T> any(T const& value)
 		: _value(new erasure_impl<typename std::decay<T const&>::type>(value)) {

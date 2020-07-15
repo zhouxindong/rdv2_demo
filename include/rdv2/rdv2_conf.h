@@ -178,7 +178,7 @@ public:
 */
 class xml_config : public config_base {
 
-	using element = tinyxml2::XMLElement;
+	using element = guru::XMLElement;
 
 public:
 	class xml_config_load_error : public std::exception 
