@@ -13,7 +13,7 @@ namespace ssa
 	/**
 	*  数据属性描述信息。
 	*/
-	struct xmDataAttr
+	struct xmVDR_EXPORT xmDataAttr
 	{
 	public:
 		//数据的名字不能超过16个汉字
@@ -21,44 +21,49 @@ namespace ssa
 		/**
 		* 数据类型。
 		*/
-		unsigned char   m_dtType = xmEDataType::xmDT_UNKNOWN;
+		unsigned char   m_dtType;// = xmEDataType::xmDT_UNKNOWN;
 		/**
 		* 所属作用域。
 		*/
-		unsigned short  m_uRegion = 0;
+		unsigned short  m_uRegion;// = 0;
 		/**
 		* 所属数据集。
 		*/
-		unsigned int    m_uDataSetID = 0;
+		unsigned int    m_uDataSetID;// = 0;
 		/**
 		* 长度，通常情况下双精度已经够用。
 		*/
-		unsigned int    m_uSize = 8;
+		unsigned int    m_uSize;// = 8;
 		/**
 		* 复位时间。
 		*/
-		unsigned int    m_uResetTime = 0xFFFFFFFF;
+		unsigned int    m_uResetTime;// = 0xFFFFFFFF;
 		/**
 		* 是否可以共享。
 		* 系统使用，用户使用时不用管。
 		*/
-		bool            m_bShared = false;
+		bool            m_bShared;// = false;
 		/**
 		* 数据全局ID。
 		* 系统使用，用户使用时不用管。
 		*/
-		unsigned int    m_uGlobalID = 0;
+		unsigned int    m_uGlobalID;// = 0;
 		/**
 		* 数据内部使用ID。
 		* 系统使用，用户使用时不用管。
 		*/
-		unsigned int    m_uInnerID = 0;
+		unsigned int    m_uInnerID;// = 0;
 		/**
-		* 是否服务器自动分配资源。
-		* 需要从服务器分配资源还是客户端制定，1表示自动分配。
+		* 多个类型的表示方法，每个字节的含义如下：
+		* 第0字节是否服务器自动分配资源，需要从服务器分配资源还是客户端制定，1表示自动分配。
+		* 第1字节表示是否为指令还是数据，0表示数据，1表示指令信息。
 		*/
-		unsigned int    m_uAutoAlloc = 1;
+		unsigned char   m_uAutoAlloc[4];// = { 1,0,0,0 };
+
+	public:
+		xmDataAttr();
 	};
+
 #pragma pack()
 
 	class xmDataUtils

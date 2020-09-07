@@ -112,9 +112,6 @@
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>../lib/x86</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>copy "..\lib\x86\*.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

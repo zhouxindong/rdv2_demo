@@ -8,7 +8,6 @@ namespace ssa
 {
 	class xmPacketFactory
 	{
-		//static xmMutex   m_Mutex;
 		static void      DoPacket(xmPacket*& pkt, xmEPackCodes epc, bool isCreate);
 	public:
 		static xmPacket* CreatePacket(xmEPackCodes epc);

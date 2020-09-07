@@ -70,10 +70,11 @@ namespace ssa
 	{
 		xmEET_NOTHING = 0,         /**< 未定义。 */
 		xmEET_ANY,                 /**< 任意类型均可，主要用于内部通信时使用，在对外时，通常不是服务器就是客户端。 */
-		xmEET_SERVER,		       /**< 服务器端。 */
+		xmEET_SERVER,		       /**< 服务器端，仿真系统所有数据信息、值的存储和策略的管理。 */
 		xmEET_CLIENTMIN = 10,      /**< 客户端和系统服务器的分界，用于系统内部判断使用。 */
-		xmEET_CLIENT,	           /**< 客户端。 */
-		xmEET_RTE,		           /**< RTE端。 */
+		xmEET_CLIENT,	           /**< 客户端，常规仿真节点。 */
+		xmEET_RTE,		           /**< RTE端，预留为一台机器使用一个运行时环境。 */
+		xmEET_RADIO,		       /**< 用于向给客户端广播数据。 */
 	} xmEEndpointType;
 
 	/**
@@ -87,6 +88,32 @@ namespace ssa
 		xmESS_MAX,
 	} xmESystemState;
 
+	/**
+	* VDR系统中进行时间同步。
+	*/	
+	class xmTimeStamp
+	{
+	public:
+		long long        m_lTimeStamp; /**< 时间戳。 */
+		long long        m_lFrameCount;/**< 帧计数。 */
+
+		xmTimeStamp()
+		{
+			 m_lTimeStamp = 0;
+			 m_lFrameCount = 0;
+		}
+	};
+
+	/**
+	* VDR系统中同步传输要求。
+	*/
+	typedef enum __tagQos
+	{
+		xmEQoS_DEFAULT = 0,       /**< 使用默认传输方式。 */
+		xmEQoS_UNRELIABLE,        /**< 使用尽量快的传输方式，不保证完全可靠。 */
+		xmEQoS_RELIABLE,          /**< 使用可靠传输方式。 */
+		xmEQoS_MAX = 64,          /**< 最大的Qos类型。 */
+	}xmEQos;
 
 #define xmMAX_PKG_LENGTH        64*1024     /**< 最大的数据包长度,为了适应网络UDP的长度要求。 */
 #define xmMAX_SINGLE_DATA_VALUE_LENGTH 63*1024     /**< 每个数据对应值最大的长度，如果超出了，需要用户将数据自行分解处理。 */

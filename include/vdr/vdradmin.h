@@ -24,7 +24,8 @@ namespace ssa
 		int  ConfigSystemDataSetEventHandler(xmEDataSetEvent neDataSetEvent, xmMsgHandler* pHandler = 0);
 		int  ConfigSystemNodeEventHandler(xmENodeEvent neNodeEvent, xmMsgHandler* pHandler = 0);
 		bool RemoveDataSet(const std::vector<std::string>& strNames);
-		int  SyncContent(const char* strDataSetName, xmESyncDirection am);
+		bool RemoveNode(const std::vector<std::string>& strNames);
+		int  SyncContent(const char* strDataSetName, xmESyncDirection syncDir);
 		bool SyncMainMemory2Mirror(const char* strDataSet);
 		void Promote(bool isUp = true);
 	private:

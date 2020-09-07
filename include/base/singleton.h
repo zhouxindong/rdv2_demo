@@ -25,42 +25,14 @@
 #include "exceptions.h"
 #include "assertmsg.h"
 #include "ptr.h"
+#include "async.h"
+
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 #include <mutex>
+#endif
 
 namespace ssa
 {
-	/******************************************************************************/
-	/** @class xmUncopyable
-	@brief
-		实现一个不可复制的对象
-	@par 多线程安全
-		不适用
-	@par 示例
-		@par
-		@code
-			class myClass : private xmUncopyable
-			{
-			public:
-				myClass() : m_iParam(0){};
-			private:
-				int m_iParam;
-			};
-
-			myClass C1;		//	没问题
-			myClass C2(C1);	//	编译错误。
-		@endcode
-	*******************************************************************************/
-	class xmBASE_EXPORT xmUncopyable
-	{
-	protected:
-		xmUncopyable(){};
-		virtual ~xmUncopyable(){};
-	private:
-		xmUncopyable(const xmUncopyable&);
-		xmUncopyable& operator=(const xmUncopyable&);
-	};
-
-
 	/******************************************************************************/
 	/** @class xmSingleton
 	@brief
@@ -112,15 +84,27 @@ namespace ssa
 				return m_Instance;
 			}
 
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 			m_Mutex.lock();
+#else
+            m_Mutex.Lock();
+#endif
 			if (NULL != m_Instance)
 			{
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 				m_Mutex.unlock();
+#else
+				m_Mutex.Unlock();
+#endif
 				return m_Instance;
 			}
 
 			m_Instance = new(std::nothrow) T();
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 			m_Mutex.unlock();
+#else
+			m_Mutex.Unlock();
+#endif
 			return m_Instance;
 		}
 
@@ -128,14 +112,22 @@ namespace ssa
 		virtual ~xmSingleton() {}
 	private:
 		static T *m_Instance;
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 		static std::mutex m_Mutex;
+#else
+		static xmMutex m_Mutex;
+#endif
 	};
 
 	template<typename T>
 	T *xmSingleton<T>::m_Instance = NULL;
 
 	template<typename T>
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 	std::mutex xmSingleton<T>::m_Mutex;
+#else
+	xmMutex xmSingleton<T>::m_Mutex;
+#endif
 
 	#define DECLARE_SINGLETON(T) friend class xmSingleton<T>;
 

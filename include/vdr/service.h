@@ -1,14 +1,19 @@
 #ifndef __SSA_VDR_SERVICE_H
 #define __SSA_VDR_SERVICE_H
 
+#include "defs.h"
 #include "datacenter.h"
 #include "sessioncenter.h"
 #include "sensmsghandler.h"
 #include "logiccontroller.h"
 #include "iservice.h"
 #include "isyncproxy.h"
-#include "defs.h"
+#include "authoritymanage.h"
+#include <unordered_map>
+#include "mmtimer.h"
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 #include <shared_mutex>
+#endif
 
 namespace ssa
 {
@@ -17,11 +22,13 @@ namespace ssa
 	public:
 		xmService();
 
-		void               SetCommProxy(xmICommProxy* pCommProxy) { m_pCommProxy = pCommProxy; };
+		void               SetCommProxy(xmICommProxy* pCommProxy);// { m_pCommProxy = pCommProxy; };
 		xmICommProxy*      GetCommProxy() { return m_pCommProxy; };
 		xmVDRAttr*         GetVDRAttr();
 		//测试是否与服务器通信正常
 		bool               IsCommOK();
+		//通知所有客户端，服务器停止工作
+		bool               ExcCmd(void* cmd);
 		//判断是否初始化完毕
 		bool               IsValid();
 		bool               IsValid(std::string strDataSetName);
@@ -57,7 +64,7 @@ namespace ssa
 		//如果需要服务器端新建内存的时候使uIsLocal=0，如果只是建立本地内存使用uIsLocal=1；
 		int                BuildMemory(const std::string& strDataSetName, unsigned char uIsLocal = 1);
 		//发起时间信号，输入参数为同步周期，如果直接发送给各个客户端isUseServerLoop为false，如果需要通过服务器发送isUseServerLoop为true。
-		int                TickSignal(int nTickTime, int nSyncCycles, bool isUseServerLoop = false);
+		int                TickSignal(int nTickTime, int nSyncCycles, bool isUseServerLoop = false, bool isUseLocalTimer = false);
 
 		//对系统状态进行管理
 		int                SwitchSystemState(xmESystemState es);
@@ -69,8 +76,11 @@ namespace ssa
 		//设置是否自动往外发送数据
 		void               SetAutoPublishSign(const std::string& strName, bool autoPublishSign);
 		//手动同步触发信号，两种情况，一种是需要上传新的数据，同时获取新的内存数据，一种情况仅仅获取服务器端的数据。
-		int                SyncContent(const std::string& strDataSetName, xmESyncDirection am, bool transMsgUsePostMode, bool bUseRTE);
-		int                SendEmptyPkt(const std::string& strDataSetName, xmESyncDirection am, bool transMsgUsePostMode);
+		int                SyncContent(const std::string& strDataSetName, xmESyncDirection syncDir, bool transMsgUsePostMode, bool bUseRTE);
+		int                CombContent(xmDataSetWithDetail* p, char* pBuf, int nStartPos, int nLength, bool bUseLast, xmEQos eTansMode, xmESyncDirection syncDir, bool transMsgUsePostMode, bool bUseRTE);
+		int                SendEmptyPkt(const std::string& strDataSetName, xmESyncDirection syncDir, bool transMsgUsePostMode);
+		
+		int                RushValue(const char* strDataName, const char* bValue, unsigned int uLength, const char* flag);
 		int                Paste2Bulletin(const char* strSender, const char* strTopic, const char* pBuf, unsigned int uLength);
 		int                MCast2Nodes(const char* strFromNode, const std::vector<std::string>& vToNodeName, const char* pBuf, unsigned int uLength);
 		//将数据包分发处理
@@ -85,20 +95,6 @@ namespace ssa
 		xmSensMSGHandler*  GetSensMSGHandler() { return &m_SensMSGHandler; };
 		xmDataCenter*      GetDataCenter() { return &m_DataCenter; };
 
-		bool               IsAttached(const std::string& strDataSetName);
-		void               AddAttached(const xmDataSet& ds);
-		void               RemoveAttached(const std::string& strDataSetName);
-		void               RenewAttachedInfo(const xmDataSet& ds);
-		void               ClearAttached();
-		std::map<std::string, xmDataSet>&      GetAttchedDataSet();
-
-
-		bool               IsAuthorized(const std::string& ndName);
-		void               AddAuthorized(const xmNode& nd);
-		void               RemoveAuthorized(const std::string& ndName);
-		void               ClearAuthorized();
-		std::map<std::string, xmNode>&         GetAuthorizedNode();
-
 		void               SetWaitTime(long nTime = xmMAX_WAITING_TIME);
 		long               GetWaitTime();
 
@@ -110,8 +106,13 @@ namespace ssa
 		void               DoSync();
 		void               EndSync();
 
-		long long          GetTimeStamp() {return m_lTimeStamp;};
+		long long          GetTimeStamp() {return m_lCurrentTimeStamp;};
+		long long          GetFrameCount() { return m_lCurrentFrameCount; };
+		unsigned int       GetSNCode() { return m_nSNCode; };
 
+		bool               StartLocalTimer(int nTickTime, int nSyncCycles);
+		bool               StopLocalTimer();
+		bool               BroadcastStop();
 	public:
 		typedef enum __tagServiceState
 		{
@@ -124,7 +125,17 @@ namespace ssa
 		//系统的状态
 		xmESystemState     m_eSystemState;
 
-		long long          m_lTimeStamp;
+		long long          m_lFrameCountTotal;// = 0;
+		//当前的时间戳
+		long long          m_lCurrentTimeStamp;
+		//当前帧号
+		long long          m_lCurrentFrameCount;
+		//是否使用自己的时钟;
+		bool               m_bIsUseLocalTimer;// = false;
+		bool               m_bIsLocalTimerStart;// = false;
+		MMTimer*           m_pLocalMMTimer;// = 0;
+		//用于权限集中管理
+		xmAuthorityManage  m_AuthorityManage;
 
 	private:
 		void               CreateSingleSession(int nSessionID);
@@ -134,30 +145,38 @@ namespace ssa
 	private:
 		//用于保证ds初始化过程的状态，最好使用状态机。
 		xmEServiceState    m_State;
-		//这个当前的名字是指依托那个数据集合进行操作
-		std::map<std::string, xmDataSet>      m_mapAttchedDataSet;
-		std::map<std::string, xmNode>         m_mapAuthorizedNode;
+
 		//判断在本通信节点的VDR中,数据集是否可以往外发送自己的值
-		std::map<std::string, bool>           m_mapHavePublishValueAbility;
+		std::unordered_map<std::string, bool>           m_mapHavePublishValueAbility;
 		//用于判断数据集是时钟驱动还是由外部的手动驱动
-		std::map<std::string, bool>           m_mapAutoPublishSign;
+		std::unordered_map<std::string, bool>           m_mapAutoPublishSign;
 
 		xmDataCenter       m_DataCenter;
 		xmSessionCenter    m_SessionCenter;
 		xmLogicController  m_LogicController;
 		xmSensMSGHandler   m_SensMSGHandler;
 
-		typedef std::map<int, xmSession*>  SessionRegistry;
+		typedef std::unordered_map<int, xmSession*>  SessionRegistry;
 		SessionRegistry    m_SessionRegistry;
 		xmICommProxy*      m_pCommProxy;
 		xmISyncProxy*      m_pSyncProxy;
 
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 		std::shared_mutex  m_LocalMutex;
 		std::shared_mutex  m_GlobalMutex;
 		std::shared_mutex  m_LogMutex;
 		std::shared_mutex  m_SyncMutex;
+#else
+
+		xmMutex            m_LocalMutex;
+		xmMutex            m_GlobalMutex;
+		xmMutex            m_LogMutex;
+		xmMutex            m_SyncMutex;
+#endif
 
 		long               m_nWaitTime;
+		unsigned int       m_nSNCode;
+		xmEEndpointType    m_eEndpointType;
 	};
 }
 

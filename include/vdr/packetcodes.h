@@ -88,6 +88,9 @@ namespace ssa
 		xmPACK_FETCH_DATASET_ASK,
 		//客户端接收到询问数据集回复
 		xmPACK_FETCH_DATASET_RSP,
+		//用于报文的重传，防止丢包
+		xmPACK_FRAME_TRANS_AGAIN_ASK,
+		xmPACK_FRAME_TRANS_AGAIN_RSP,
 
 		xmPACK_VALTYPE_BEGIN = 100,
 		//申请内存同步，通常是客户端的数据有更新，数据集合直接处理
@@ -102,6 +105,12 @@ namespace ssa
 		xmPACK_MEMORYSYNC_RTE_RSP,
 
 		xmPACK_SYNCCYCLE_CALLBACK,
+
+		//仅进行单个数据值同步
+		xmPACK_DATAVALSYNC_ASK,
+		xmPACK_DATAVALSYNC_RSP,
+		xmPACK_DATAVALSYNC_BROADCAST,
+
 		xmPACK_VALTYPE_END,
 
 
@@ -131,6 +140,9 @@ namespace ssa
 		xmPACK_SYSSTATE_CHANGE_RSP,
 		xmPACK_COMM_IS_OK_ASK,
 		xmPACK_COMM_IS_OK_RSP,
+		xmPACK_SERVER_STOP_ASK,
+		xmPACK_SERVER_STOP_RSP,
+		xmPACK_SERVER_CLIENT_ASK,
 
 		//////////以下为待用
 		//xmPACK_TRANSDATABEGIN_ASK,

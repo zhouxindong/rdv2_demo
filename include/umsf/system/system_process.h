@@ -28,8 +28,8 @@ public:
 	virtual xmRet RegisterData(const xmString& strDataName, const xmValue& aValue, const xmString& strAttribute = NULL);
 	virtual xmRet RegisterSensDate(const xmString& strDataPath);
 	
-	virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue);
-	virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue);
+	virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO);
+	virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO);
 
 	virtual unsigned int GetSimulateState(void) const 
 	{ 

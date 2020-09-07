@@ -8,8 +8,8 @@ namespace ssa
 	class xmLuaLoader : public xmIModelLoader
 	{
 	public:
-		xmLuaLoader(const xmString& strModelFile, xmIModelServer* pModelServer) : xmIModelLoader(strModelFile, pModelServer) {};
-		virtual ~xmLuaLoader()	{};
+		xmLuaLoader(const xmString& strModelFile, xmIModelServer* pModelServer) : xmIModelLoader(strModelFile, pModelServer), m_pLuaModel(NULL) {};
+		virtual ~xmLuaLoader();
 
 		virtual xmRet CreateModelInstance();
 		virtual const char* ModelFlag()  const
@@ -19,7 +19,7 @@ namespace ssa
 		virtual xmIModel* Model();
 
 	private:
-		xmPtr<xmLuaModel> m_pLuaModel;
+		xmLuaModel* m_pLuaModel;
 	};
 }
 #endif  //  __SSA_UMSF_LUALOADER_H

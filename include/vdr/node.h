@@ -25,7 +25,7 @@ namespace ssa
 	/**
 	*  节点属性描述信息。
 	*/
-	struct xmNodeAttr
+	struct xmVDR_EXPORT xmNodeAttr
 	{
 	public:
 		//std::string     m_strName;   
@@ -34,11 +34,11 @@ namespace ssa
 		/**
 		* 节点类型。
 		*/
-		unsigned char   m_ndType = xmENodeType::xmENT_NOTHING;
+		unsigned char   m_ndType;// = xmENodeType::xmENT_NOTHING;
 		/**
 		* 所属作用域。
 		*/
-		unsigned short  m_uRegion = 0;
+		unsigned short  m_uRegion;// = 0;
 		/**
 		* 全局ID。
 		*/
@@ -47,7 +47,10 @@ namespace ssa
 		* 全局ID等信息是否自动分配。
 		* 需要从服务器分配资源还是客户端制定，1表示自动分配。
 		*/
-		unsigned int    m_uAutoAlloc = 1;
+		unsigned int    m_uAutoAlloc;// = 1;
+
+	public:
+		xmNodeAttr();
 	};
 #pragma pack()
 
@@ -73,7 +76,7 @@ namespace ssa
 		* @param uRegion 所属域。
 		* @return 为空。
 		*/
-		void SetAttr(const char* strName, xmENodeType eType, unsigned char uRegion);
+		void SetAttr(const char* strName, xmENodeType eType, unsigned short uRegion);
 		/**
 		* 设置属性。
 		* @param strName 名字。

@@ -14,8 +14,8 @@ namespace ssa
 	class xmVDR_EXPORT xmICommProxy : public xmIProxy
 	{
 	public:
-		xmICommProxy() :m_pService(0) {};
-		virtual ~xmICommProxy(){};
+		xmICommProxy();
+		virtual ~xmICommProxy();
 
 		/**
 		* 初始化接口，需要继承实现。
@@ -33,6 +33,12 @@ namespace ssa
 		* @return 接口信息类型。
 		*/
 		virtual xmEVDRCommProxyType GetCommProxyType()= 0;
+		/**
+		* 获取/设置默认通信方式，包括可靠和不可靠两种模式。
+		* @return 通信方式。
+		*/		
+		virtual int                 GetDefaultQos();
+		virtual void                SetDefaultQos(int nQos);
 		/**
 		* 获取通信接口的ID号，目前使用接口类型来作为ID号标示不同的通信接口。
 		* @return 接口ID号。
@@ -74,7 +80,8 @@ namespace ssa
 		virtual int                 Recv(char* buf, int nLen);
 
 	private:
-		xmIService*                 m_pService = 0;
+		xmIService*                 m_pService;
+		int                         m_nQos;
 	};
 }
 

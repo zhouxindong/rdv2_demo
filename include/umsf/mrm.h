@@ -17,6 +17,7 @@ Copyright (C), 2011-2022, ACC12. All rights reserved.
 #define __SSA_UMSF_MRM_H
 #include "publicres.h"
 #include "mdi.h"
+#include "mui.h"
 #include "mrtc.h"
 #include "tinyxml2/tinyxml2.h"
 #include "udefine.h"
@@ -74,10 +75,11 @@ namespace ssa
 			return m_mapModelInstance.PosValue(pos);
 		}
 
-		//	根据网络节拍数，按照模型配置，对模型进行驱动
-		bool DriveByClick(const smWorldClick& aMsg);
-		//	根据系统时间，按照模型配置，对模型进行驱动
-		bool DriveByTime(const smSystemTime& aMsg);
+		//	xmLog::todo() 动态创建和删除实例，此接口部分完成：
+		//	（1）可以根据MUI创建一个实例，但是尚未将输出数据注册到网络中
+		//	（2）可以根据名称删除一个实例，但是尚未将已注册的VDR数据删除、未将注册的敏感数据取消
+		xmMrtc* AddInstance(const xmMui* pMui);
+		xmRet DeleteInstance(const xmString& strInstanceName);
 
 		//	下面函数是对所有实例都进行相同的操作
 		//	获取模型驱动节拍数
@@ -85,19 +87,6 @@ namespace ssa
 		unsigned int GetDriveClick() const
 		{
 			return m_uDriveClick;
-		}
-		//	控制命令响应
-		bool IsRespondStart() const
-		{
-			return m_pMdi->IsRespondStart();
-		}
-		bool IsRespondFreeze() const
-		{
-			return m_pMdi->IsRespondFreeze();
-		}
-		bool IsRespondSpeed() const
-		{
-			return m_pMdi->IsRespondSpeed();
 		}
 
 		//	复位本模型全部实例的组激活状态
@@ -108,25 +97,43 @@ namespace ssa
 				m_mapModelInstance.IndexValue(i)->ResetGroupEnable(bIsEnabled);
 			}
 		}
+
 		//	启动本模型全部实例
+		void CreateInstance(void)
+		{
+			for (size_t i = 0; i < m_mapModelInstance.Size(); i++)
+			{
+				if (m_mapModelInstance.IndexValue(i)->IsAutoRun())
+				{
+					m_mapModelInstance.IndexValue(i)->CreateInstance(false);
+				}
+			}
+		}
+		void DestroyInstance(void)
+		{
+			for (size_t i = 0; i < m_mapModelInstance.Size(); i++)
+			{
+				m_mapModelInstance.IndexValue(i)->DestroyInstance();
+			}
+		}
 		void ReadyToGo(void)
 		{
 			for (size_t i = 0; i < m_mapModelInstance.Size(); i++)
 			{
-				m_mapModelInstance.IndexValue(i)->Resume();
+				m_mapModelInstance.IndexValue(i)->ReadyToGo();
 			}
 		}
+
 		//	用于将一个Message分发给不同的模型实例
 		void DispatchMsg(const xmMessage& aMessage)
 		{
 			for (size_t i=0; i<m_mapModelInstance.Size(); i++)
 			{
-				m_mapModelInstance.IndexValue(i)->PostMsg(aMessage);
+				m_mapModelInstance.IndexValue(i)->TestActiveAndPostMessage(aMessage);
 			}
 		}
 
 	private:
-
 		xmPublicResource* const m_pPublicRes;
 
 		//	模型名称
@@ -135,7 +142,12 @@ namespace ssa
 		xmString m_strModelDes;
 
 		//	模型运行的静态接口，由分析模型的XML数据文件获得
-		xmMdi* m_pMdi;
+		xmPtr<xmMdi> m_pMdi;
+
+		//	模型计算文件绝对路径
+		xmString m_strModelCalculationFile;
+		//	模型描述文件绝对路径
+		xmString m_strModelDescriptionFile;
 
 		//	驱动节拍数，单位：节拍数
 		unsigned int m_uDriveClick;
@@ -143,9 +155,6 @@ namespace ssa
 		//	模型实例，一个模型类可以生成多个模型实例
 		typedef xmOrderMap<xmString, xmPtr<xmMrtc> > t_MrtcMap;
 		t_MrtcMap m_mapModelInstance;
-		//	根据<INSTANCE>字段内容，创建一个模型实例，并添加到MRM列表中
-		void _AddInstance(const xmString& strModelFile, tinyxml2::XMLElement* instance);
-		void _MatchData(xmMrtc* pMrtc, tinyxml2::XMLElement* data_match, bool bAutoType = true, xmEIOType ioType = IOT_INNER);
 	};
 }
 #endif	//	__SSA_UMSF_MRM_H

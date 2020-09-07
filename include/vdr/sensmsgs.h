@@ -97,7 +97,7 @@ namespace ssa
 	*  使用的函数宏为：xmMSGNodeEventFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_NODE_EVENT
 	*/
-	class xmMSGNodeEvent : public xmMessage
+	class xmMSGNodeEvent : public xmMessage , public xmTimeStamp
 	{
 	public:
 		xmMSGNodeEvent(void)
@@ -105,15 +105,20 @@ namespace ssa
 			m_strNodeName = "";
 			m_NodeEvent = xmENE_NOTHING;
 		};
-		xmMSGNodeEvent(const xmMSGNodeEvent& msgNodeEvent)
+		xmMSGNodeEvent(const xmMSGNodeEvent& msg)
 		{
-			m_strNodeName = msgNodeEvent.m_strNodeName;
-			m_NodeEvent = msgNodeEvent.m_NodeEvent;
+			m_strNodeName = msg.m_strNodeName;
+			m_NodeEvent = msg.m_NodeEvent;
+
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
-		void xmMSGNodeEvent::operator=(const xmMSGNodeEvent& msgNodeEvent)
+		void xmMSGNodeEvent::operator=(const xmMSGNodeEvent& msg)
 		{
-			m_strNodeName = msgNodeEvent.m_strNodeName;
-			m_NodeEvent = msgNodeEvent.m_NodeEvent;
+			m_strNodeName = msg.m_strNodeName;
+			m_NodeEvent = msg.m_NodeEvent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
 
 		virtual ~xmMSGNodeEvent(void) {};
@@ -143,7 +148,7 @@ namespace ssa
 	*  使用的函数宏为：xmMSGDataSetEventFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_DATASET_EVENT
 	*/
-	class xmMSGDataSetEvent : public xmMessage
+	class xmMSGDataSetEvent : public xmMessage, public xmTimeStamp
 	{
 	public:
 		xmMSGDataSetEvent(void)
@@ -151,15 +156,19 @@ namespace ssa
 			m_strDataSetName = "";
 			m_DataSetEvent = xmEDSE_NOTHING;
 		};
-		xmMSGDataSetEvent(const xmMSGDataSetEvent& msgDataSetEvent)
+		xmMSGDataSetEvent(const xmMSGDataSetEvent& msg)
 		{
-			m_strDataSetName = msgDataSetEvent.m_strDataSetName;
-			m_DataSetEvent = msgDataSetEvent.m_DataSetEvent;
+			m_strDataSetName = msg.m_strDataSetName;
+			m_DataSetEvent = msg.m_DataSetEvent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
-		void xmMSGDataSetEvent::operator=(const xmMSGDataSetEvent& msgDataSetEvent)
+		void xmMSGDataSetEvent::operator=(const xmMSGDataSetEvent& msg)
 		{
-			m_strDataSetName = msgDataSetEvent.m_strDataSetName;
-			m_DataSetEvent = msgDataSetEvent.m_DataSetEvent;
+			m_strDataSetName = msg.m_strDataSetName;
+			m_DataSetEvent = msg.m_DataSetEvent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
 
 		virtual ~xmMSGDataSetEvent(void){};
@@ -189,7 +198,7 @@ namespace ssa
 	*  使用的函数宏为：xmMSGDataEventFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_DATA_EVENT
 	*/
-	class xmMSGDataEvent : public xmMessage
+	class xmMSGDataEvent : public xmMessage, public xmTimeStamp
 	{
 	public:
 
@@ -197,24 +206,28 @@ namespace ssa
 		{
 			m_evDataEvent = xmEDE_NOTHING;
 		};
-		xmMSGDataEvent(const xmMSGDataEvent& msgData)
+		xmMSGDataEvent(const xmMSGDataEvent& msg)
 		{
-			m_strDataName = msgData.m_strDataName;
-			m_evDataEvent    = msgData.m_evDataEvent;
-			m_eDataType = msgData.m_eDataType;
-			m_bbValue     = msgData.m_bbValue;
-			m_Value.Initialize(msgData.m_Value);
-			m_bDataSetEvent   = msgData.m_bDataSetEvent;
+			m_strDataName = msg.m_strDataName;
+			m_evDataEvent    = msg.m_evDataEvent;
+			m_eDataType = msg.m_eDataType;
+			m_bbValue     = msg.m_bbValue;
+			m_Value.Initialize(msg.m_Value);
+			m_bDataSetEvent   = msg.m_bDataSetEvent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
 
-		void xmMSGDataEvent::operator=(const xmMSGDataEvent& msgData)
+		void xmMSGDataEvent::operator=(const xmMSGDataEvent& msg)
 		{
-			m_strDataName = msgData.m_strDataName;
-			m_evDataEvent = msgData.m_evDataEvent;
-			m_eDataType = msgData.m_eDataType;
-			m_bbValue = msgData.m_bbValue;
-			m_Value.Initialize(msgData.m_Value);
-			m_bDataSetEvent = msgData.m_bDataSetEvent;
+			m_strDataName = msg.m_strDataName;
+			m_evDataEvent = msg.m_evDataEvent;
+			m_eDataType = msg.m_eDataType;
+			m_bbValue = msg.m_bbValue;
+			m_Value.Initialize(msg.m_Value);
+			m_bDataSetEvent = msg.m_bDataSetEvent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
 
@@ -261,22 +274,26 @@ namespace ssa
 	*  使用的函数宏为：xmMSGBulletinFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_BULLETIN
 	*/
-	class xmMSGBulletin : public xmMessage
+	class xmMSGBulletin : public xmMessage, public xmTimeStamp
 	{
 	public:
 		xmMSGBulletin(void){};
-		xmMSGBulletin(const xmMSGBulletin& msgBulletin)
+		xmMSGBulletin(const xmMSGBulletin& msg)
 		{
-			m_strSender = msgBulletin.m_strSender;
-			m_strTopic = msgBulletin.m_strTopic;
-			m_dbContent = msgBulletin.m_dbContent;
+			m_strSender = msg.m_strSender;
+			m_strTopic = msg.m_strTopic;
+			m_dbContent = msg.m_dbContent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
-		void xmMSGBulletin::operator=(const xmMSGBulletin& msgBulletin)
+		void xmMSGBulletin::operator=(const xmMSGBulletin& msg)
 		{
-			m_strSender = msgBulletin.m_strSender;
-			m_strTopic = msgBulletin.m_strTopic;
-			m_dbContent = msgBulletin.m_dbContent;
+			m_strSender = msg.m_strSender;
+			m_strTopic = msg.m_strTopic;
+			m_dbContent = msg.m_dbContent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
 		virtual ~xmMSGBulletin(void){};
@@ -308,20 +325,24 @@ namespace ssa
 	*  使用的函数宏为：xmMSGMCastFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_MCAST
 	*/
-	class xmMSGMCast : public xmMessage
+	class xmMSGMCast : public xmMessage, public xmTimeStamp
 	{
 	public:
 		xmMSGMCast(void) {};
-		xmMSGMCast(const xmMSGMCast& msgMCast)
+		xmMSGMCast(const xmMSGMCast& msg)
 		{
-			m_strSender = msgMCast.m_strSender;
-			m_dbContent = msgMCast.m_dbContent;
+			m_strSender = msg.m_strSender;
+			m_dbContent = msg.m_dbContent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
-		void xmMSGMCast::operator=(const xmMSGMCast& msgMCast)
+		void xmMSGMCast::operator=(const xmMSGMCast& msg)
 		{
-			m_strSender = msgMCast.m_strSender;
-			m_dbContent = msgMCast.m_dbContent;
+			m_strSender = msg.m_strSender;
+			m_dbContent = msg.m_dbContent;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
 		virtual ~xmMSGMCast(void) {};
@@ -349,18 +370,22 @@ namespace ssa
 	*  使用的函数宏为：xmMSGLogFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_LOG
 	*/
-	class xmMSGLog : public xmMessage
+	class xmMSGLog : public xmMessage, public xmTimeStamp
 	{
 	public:
 		xmMSGLog(void) {};
-		xmMSGLog(const xmMSGLog& msgLog)
+		xmMSGLog(const xmMSGLog& msg)
 		{
-			m_strLog = msgLog.m_strLog;
+			m_strLog = msg.m_strLog;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
-		void xmMSGLog::operator=(const xmMSGLog& msgLog)
+		void xmMSGLog::operator=(const xmMSGLog& msg)
 		{
-			m_strLog = msgLog.m_strLog;
+			m_strLog = msg.m_strLog;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
 		virtual ~xmMSGLog(void) {};
@@ -386,24 +411,24 @@ namespace ssa
 	*  使用的函数宏为：xmMSGTimerClickFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_WORLD_TIMER
 	*/
-	class xmMSGTimerClick : public xmMessage
+	class xmMSGTimerClick : public xmMessage, public xmTimeStamp
 	{
 	public:
 		xmMSGTimerClick(void){};
-		xmMSGTimerClick(const xmMSGTimerClick& msgTimerClick)
+		xmMSGTimerClick(const xmMSGTimerClick& msg)
 		{
-			m_lTimeCount = msgTimerClick.m_lTimeCount;
-			m_lAbsTime = msgTimerClick.m_lAbsTime;
-			m_nTickTime = msgTimerClick.m_nTickTime;
-			m_nSyncCycles = msgTimerClick.m_nSyncCycles;
+			m_nTickTime = msg.m_nTickTime;
+			m_nSyncCycles = msg.m_nSyncCycles;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
-		void xmMSGTimerClick::operator=(const xmMSGTimerClick& msgTimerClick)
+		void xmMSGTimerClick::operator=(const xmMSGTimerClick& msg)
 		{
-			m_lTimeCount = msgTimerClick.m_lTimeCount;
-			m_lAbsTime = msgTimerClick.m_lAbsTime;
-			m_nTickTime = msgTimerClick.m_nTickTime;
-			m_nSyncCycles = msgTimerClick.m_nSyncCycles;
+			m_nTickTime = msg.m_nTickTime;
+			m_nSyncCycles = msg.m_nSyncCycles;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
 		virtual ~xmMSGTimerClick(void){};
@@ -413,14 +438,6 @@ namespace ssa
 		}
 
 	public:
-		/**
-		*  时钟计数，从本地接收到发送时钟消息开始计数。
-		*/
-		long long m_lTimeCount;
-		/**
-		*  绝对时间，服务器发出时钟时的服务器时间。
-		*/
-		long long m_lAbsTime;
 		/**
 		*  基础时钟。
 		*/
@@ -443,20 +460,20 @@ namespace ssa
 	{
 	public:
 		xmMSGValueSyncTimerClick(void) {};
-		xmMSGValueSyncTimerClick(const xmMSGValueSyncTimerClick& msgTimerClick)
+		xmMSGValueSyncTimerClick(const xmMSGValueSyncTimerClick& msg)
 		{
-			m_lTimeCount = msgTimerClick.m_lTimeCount;
-			m_lAbsTime = msgTimerClick.m_lAbsTime;
-			m_nTickTime = msgTimerClick.m_nTickTime;
-			m_nSyncCycles = msgTimerClick.m_nSyncCycles;
+			m_nTickTime = msg.m_nTickTime;
+			m_nSyncCycles = msg.m_nSyncCycles;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
-		void xmMSGValueSyncTimerClick::operator=(const xmMSGValueSyncTimerClick& msgTimerClick)
+		void xmMSGValueSyncTimerClick::operator=(const xmMSGValueSyncTimerClick& msg)
 		{
-			m_lTimeCount = msgTimerClick.m_lTimeCount;
-			m_lAbsTime = msgTimerClick.m_lAbsTime;
-			m_nTickTime = msgTimerClick.m_nTickTime;
-			m_nSyncCycles = msgTimerClick.m_nSyncCycles;
+			m_nTickTime = msg.m_nTickTime;
+			m_nSyncCycles = msg.m_nSyncCycles;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		}
 
 		virtual ~xmMSGValueSyncTimerClick(void) {};
@@ -474,22 +491,26 @@ namespace ssa
 	*  使用的函数宏为：xmMSGMemorySyncFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_MEMORY_SYNC
 	*/
-	class xmMSGMemorySync : public xmMessage
+	class xmMSGMemorySync : public xmMessage, public xmTimeStamp
 	{
 	public:
 		xmMSGMemorySync(void){};
-		xmMSGMemorySync(const xmMSGMemorySync& msgDataSync)
+		xmMSGMemorySync(const xmMSGMemorySync& msg)
 		{
-			strDataSetName = msgDataSync.strDataSetName;
-			m_lAbsTime = msgDataSync.m_lAbsTime;
-			m_Buffer = msgDataSync.m_Buffer;
+			strDataSetName = msg.strDataSetName;
+			memcpy(m_cArray, msg.m_cArray,8);
+			m_Buffer = msg.m_Buffer;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
 
-		void xmMSGMemorySync::operator=(const xmMSGMemorySync& msgDataSync)
+		void xmMSGMemorySync::operator=(const xmMSGMemorySync& msg)
 		{
-			strDataSetName = msgDataSync.strDataSetName;
-			m_lAbsTime = msgDataSync.m_lAbsTime;
-			m_Buffer = msgDataSync.m_Buffer;
+			strDataSetName = msg.strDataSetName;
+			memcpy(m_cArray, msg.m_cArray, 8);
+			m_Buffer = msg.m_Buffer;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
 
 		virtual ~xmMSGMemorySync(void){};
@@ -505,14 +526,15 @@ namespace ssa
 		*/
 		std::string  strDataSetName;
 		/**
-		*  发送时的时间戳
-		*  此变量表明内存块同步消息时的时间。
+		*  原来是发送时的时间戳，现在用于标识报文的其他标识，内部约定
+		*  m_cArray[0]标示事件信息，bit0表示发生了敏感事件，bit1表示发生了复位事件
+		*  m_cArray[1]标示本次来临的数据是使用哪种Qos来的。
 		*/
-		long long    m_lAbsTime;
+		char         m_cArray[8];
 
 		/**
 		*  数据值
-		*  此变量表明内存块的信息。
+		*  此变量表明内存块的信息
 		*/
 		xmByteBuffer m_Buffer;
 
@@ -526,19 +548,23 @@ namespace ssa
 	*  使用的函数宏为：xmMSGSwitchStateFunc
 	*  消息类型为：xmEEventCode::xmEEC_MSG_SYSTEM_STATE_SWITCH
 	*/
-	class xmMSGSwitchState : public xmMessage
+	class xmMSGSwitchState : public xmMessage, public xmTimeStamp
 	{
 	public:
 		xmMSGSwitchState(void){};
-		xmMSGSwitchState(const xmMSGSwitchState& msgSwitchState)
+		xmMSGSwitchState(const xmMSGSwitchState& msg)
 		{
-			m_strSender = msgSwitchState.m_strSender;
-			m_eSystemState = msgSwitchState.m_eSystemState;
+			m_strSender = msg.m_strSender;
+			m_eSystemState = msg.m_eSystemState;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
-		void xmMSGSwitchState::operator=(const xmMSGSwitchState& msgSwitchState)
+		void xmMSGSwitchState::operator=(const xmMSGSwitchState& msg)
 		{
-			m_strSender = msgSwitchState.m_strSender;
-			m_eSystemState = msgSwitchState.m_eSystemState;
+			m_strSender = msg.m_strSender;
+			m_eSystemState = msg.m_eSystemState;
+			m_lFrameCount = msg.m_lFrameCount;
+			m_lTimeStamp = msg.m_lTimeStamp;
 		};
 		virtual ~xmMSGSwitchState(void){};
 		virtual xmMessage* Clone(void) const

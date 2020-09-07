@@ -37,6 +37,7 @@ namespace ssa
 		*******************************************************************************/
 		virtual const xmString& ModelName(void) const;
 		virtual const xmString& InstanceName(void) const;
+		virtual bool IsCallbackLogged(xmEModelInterface eMi) const;
 
 		virtual size_t InnerDataCount(void) const;
 		virtual const xmString& InnerDataName(size_t uPos) const;
@@ -55,6 +56,7 @@ namespace ssa
 		virtual size_t TagData(const xmString& strTagName, xmPtr<const char*[]>& vDataName) const;
 		virtual size_t DataTag(const xmString& strDataName, xmPtr<const char*[]>& vTagName) const;
 		virtual bool IsDataTagged(const xmString& strDataName, const xmString& strTagName) const;
+		virtual bool IsDataLogged(const xmString& strDataName);
 
 		virtual xmValue InnerData(const xmString& strDataPath) const;
 		virtual xmValue InnerData(size_t uPos) const;
@@ -81,13 +83,12 @@ namespace ssa
 		virtual bool  GetGroupEnabled(const xmString& strGroupName);
 		virtual xmRet SetGroupEnabled(size_t uPos, bool bIsEnable);
 		virtual xmRet SetGroupEnabled(const xmString& strGroupName, bool bIsEnabled);
+		virtual bool IsGroupLogged(const xmString& strGroupName);
 
-		virtual xmRet ApplyGroupIO(const xmString& strGroupName);
-		virtual xmRet ApplyDataInput(const xmString& strDataName);
-		virtual xmRet ApplyDataOutput(const xmString& strDataName);
-		virtual xmRet ManualGroupIO(const xmString& strGroupName, bool bLockData = false);
-		virtual xmRet ManualDataInput(const xmString& strDataName, bool bLockData = false);
-		virtual xmRet ManualDataOutput(const xmString& strDataName, bool bLockData = false);
+		virtual xmRet ApplyGroupIO(const xmString& strGroupName, bool bCompulsive = false);
+		virtual xmRet ApplyDataIO(const xmString& strDataName);
+		virtual int   ManualGroupIO(const xmString& strGroupName, bool bLockData = false, bool bCompulsive = false, bool bSyncNow = false);
+		virtual xmRet ManualDataIO(const xmString& strDataName, bool bLockData = false, bool bSyncNow = false);
 
 		virtual const char* InterfaceVersion(void) const { return xmIMODELSERVER_VERSION; }
 	private:

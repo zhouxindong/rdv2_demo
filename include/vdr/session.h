@@ -8,7 +8,9 @@
 #include "packet.h"
 #include "icommproxy.h"
 #include "objectregistry.h"
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 #include <shared_mutex>
+#endif
 
 namespace ssa
 {
@@ -149,7 +151,11 @@ namespace ssa
 		bool                 m_bRelease;
 		xmICommProxy*        m_pCommproxy;
 		xmSessionHandler     m_SessionHandler;
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 		std::shared_mutex    m_Mutex;
+#else
+		xmMutex              m_Mutex;
+#endif
 
 	public:
 		int                  m_nLienseNo;

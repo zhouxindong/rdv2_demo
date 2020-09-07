@@ -10,6 +10,9 @@
 @see ssa::xmPtr
 @par 修改记录
 	@par
+	2020.03.15
+		-# 简化了代码，约束了设计，新的xmPtr只能一次赋值，赋值后不能改表指针内容。
+		同时，修复了使用数组类只能指针中的内存泄漏问题。
 	2014.03.03
 		-# 代码初次完成。
 @copyright (C), 2011-2022, Gonna. All rights reserved.
@@ -22,9 +25,9 @@
 namespace ssa
 {
 	/******************************************************************************/
-	/** @class __GrandPtr
+	/** @class __FatherPtr
 	@brief
-		智能指针的基类，用户不需要使用。
+		智能指针的基类，用户不需要直接使用。
 	@details
 		实现了大部分智能指针的功能，仅供xmPtr类继承。
 	@par 多线程安全
@@ -32,28 +35,28 @@ namespace ssa
 	@see xmPtr
 	*******************************************************************************/
 	template <typename T>
-	class __GrandPtr
+	class __FatherPtr
 	{
+		//	禁止用户直接创建__FatherPtr实例
 	protected:
-		typedef enum 
+		inline __FatherPtr() : m_pPtr(NULL), m_pList(NULL) {};
+		inline __FatherPtr(T* ptr) : m_pPtr(NULL), m_pList(NULL)
 		{
-			AS_AUTO,	//	自动处理
-			AS_OBJECT,	//	delete
-			AS_ARRAY,	//	delete[]
-		} PTR_TYPE;
+			_Bind(ptr, NULL);
+		}
+		inline __FatherPtr(const __FatherPtr<T>& ptr) : m_pPtr(NULL), m_pList(NULL)
+		{
+			_Bind(ptr.m_pPtr, ptr.m_pList);
+		}
+		inline virtual ~__FatherPtr() {};
+
+		//	指针和数组有不同的删除方式
+		inline virtual void _DeleteThis() = 0;
+
 		T* m_pPtr;
 		std::list<void*>* m_pList;
-		PTR_TYPE m_PtrType;
 
-		inline __GrandPtr(T* ptr):m_pPtr(NULL), m_pList(NULL), m_PtrType(AS_AUTO)
-		{
-			BindPtr(ptr);
-		}
-		inline __GrandPtr(const __GrandPtr<T>& ptr):m_pPtr(NULL), m_pList(NULL), m_PtrType(AS_AUTO)
-		{
-			BindPtr(ptr);
-		}
-		inline virtual ~__GrandPtr(){}
+
 
 	public:
 		/** 获取指针的引用计数
@@ -71,107 +74,52 @@ namespace ssa
 		*/
 		inline bool IsNULL() const
 		{
-			return (m_pPtr==NULL);
+			return (m_pPtr == NULL);
 		}
 		/** 判断指针是否为非空
 		@return 非空返回true
 		*/
 		inline bool IsNoNULL() const
 		{
-			return (m_pPtr!=NULL);
+			return (m_pPtr != NULL);
 		}
 
 		/** 将指针设置为空
 		@note
-			本函数将导致指针对象自身指向为空，指向原内存空间的引用计数减一，如果应用计数
-			为0，将销毁指向的数据。
+		本函数将导致指针对象自身指向为空，指向原内存空间的引用计数减一，如果应用计数
+		为0，将销毁指向的数据。
 		*/
-		inline void SetNULL()
+		inline void Destroy()
 		{
-			if (IsNoNULL())
+			if (IsNULL())
 			{
-				m_pList->remove(this);
-				if (m_pList->empty())
-				{
-					DeleteThis();
-					delete m_pList;
-				}
-				ClearThis();
+				return;
 			}
+			m_pList->remove(this);
+			if (m_pList->empty())
+			{
+				delete m_pList;
+				_DeleteThis();
+			}
+			_ClearThis();
 		}
 
 		/** 销毁指针指向的数据，同时将所有的对该对象的引用计数清空
 		*/
-		inline void Destroy()
+		inline void Clear()
 		{
-			if (IsNoNULL())
+			if (IsNULL())
 			{
-				m_pList->remove(this);
-				std::for_each(m_pList->begin(), m_pList->end(), ClearPtr());
-
-				DeleteThis();
-				delete m_pList;
-				ClearThis();
+				return;
 			}
+			m_pList->remove(this);
+			std::for_each(m_pList->begin(), m_pList->end(), ClearPtr());
+			delete m_pList;
+			_DeleteThis();
+			_ClearThis();
 		}
 
-
-	private:
-		//	不允许其他类型进行赋值操作
-		template <typename B>
-		inline __GrandPtr<T>& operator=(const __GrandPtr<B>& ptr)
-		{
-			return *this;
-		}
 	public:
-		/** 使用普通指针对智能指针赋值
-		*/
-		inline __GrandPtr<T>& operator=(const T* ptr)
-		{
-			SetNULL();
-			BindPtr(ptr);
-			return *this;
-		}
-		/** 使用另一个智能指针赋值
-		*/
-		inline __GrandPtr<T>& operator=(const __GrandPtr<T>& ptr)
-		{
-			SetNULL();
-			BindPtr(ptr);
-			return *this;
-		}
-
-		/** 相等判断
-		*/
-		inline bool operator==(const __GrandPtr<T>& ptr) const
-		{
-			return (m_pPtr == ptr.m_pPtr);
-		}
-		/** 相等判断
-		*/
-		inline bool operator==(const T* ptr) const
-		{
-			return (m_pPtr == ptr);
-		}
-		/** 不等判断
-		*/
-		inline bool operator!=(const __GrandPtr<T>& ptr) const
-		{
-			return !operator==(ptr);
-		}
-		/** 不等判断
-		*/
-		inline bool operator!=(const T* ptr) const
-		{
-			return !operator==(ptr);
-		}
-		/** 布尔判断
-		*/
-		inline bool operator!() const
-		{
-			return IsNULL();
-		}
-
 		/** 将指针转换为基本指针类型
 		*/
 		inline operator T*(void)
@@ -184,69 +132,7 @@ namespace ssa
 		{
 			return m_pPtr;
 		}
-	
 
-	protected:
-		inline virtual void DeleteThis() = 0;
-
-		//	Function Object（函数对象）
-		struct ClearPtr
-		{
-		public:
-			inline void operator()(void* ptr) const
-			{
-				((__GrandPtr<T>*)ptr)->ClearThis();
-			}
-		};
-		inline void ClearThis()
-		{
-			m_pPtr = NULL;
-			m_pList = NULL;
-		}
-		inline bool BindPtr(T* ptr)
-		{
-			if (ptr == NULL)
-			{
-				return false;
-			}
-
-			m_pPtr = ptr;
-			m_pList = new std::list<void*>;
-			m_pList->push_back(this);
-			m_PtrType = AS_AUTO;
-			return true;
-		}
-		inline bool BindPtr(const __GrandPtr<T>& ptr)
-		{
-			if (ptr.IsNULL())
-			{
-				return false;
-			}
-
-			m_pPtr = ptr.m_pPtr;
-			m_pList = ptr.m_pList;
-			m_pList->push_back(this);
-			m_PtrType = ptr.m_PtrType;
-			return true;
-		}
-	};
-
-	/******************************************************************************/
-	/** @class __FatherPtr
-	@brief
-		继承于 __GrandPtr ，对智能指针提供指针的“->”和“.”运算支持，用户不需要使用。 
-	@par 多线程安全
-		否
-	@see xmPtr
-	*******************************************************************************/
-	template<typename T>
-	class __FatherPtr : public __GrandPtr<T>
-	{
-	protected:
-		inline __FatherPtr(T* ptr = NULL) : __GrandPtr(ptr){};
-		inline __FatherPtr(const __FatherPtr<T>& ptr) : __GrandPtr(dynamic_cast<const __GrandPtr<T>&>(ptr)){};
-		inline virtual ~__FatherPtr(){};
-	public:
 		/** 指针的“->”运算符
 		*/
 		inline T* operator->()
@@ -271,55 +157,98 @@ namespace ssa
 		{
 			return *(operator->());
 		}
-	};
-
-	/******************************************************************************/
-	/** @class __FatherPtr<void>
-	@brief
-		对 __FatherPtr<> 专门化，对void类型指针不提供指针的“->”和“.”运算支持，用户不需要使用。 
-	@par 多线程安全
-		否
-	@see xmPtr
-	*******************************************************************************/
-	template<>
-	class __FatherPtr<void> : public __GrandPtr<void>
-	{
-	protected:
-		inline __FatherPtr(void* ptr = NULL) : __GrandPtr(ptr){};
-		inline __FatherPtr(const __FatherPtr<void>& ptr) : __GrandPtr(dynamic_cast<const __GrandPtr<void>&>(ptr)){};
-		inline virtual ~__FatherPtr(){};
-	};
 
 
-	/******************************************************************************/
-	/** @class __ObjectPtr<T>
-	@brief
-		实现自身的删除操作，用户不需要使用。 
-	@par 多线程安全
-		否
-	@see xmPtr
-	*******************************************************************************/
-	template <typename T>
-	class __ObjectPtr : public __FatherPtr<T>
-	{
-	protected:
-		inline __ObjectPtr(T* ptr = NULL) : __FatherPtr(ptr) {};
-		inline __ObjectPtr(const __ObjectPtr<T>& ptr) : __FatherPtr(dynamic_cast<const __FatherPtr<T>&>(ptr)) {};
-		inline virtual ~__ObjectPtr() {};
-
-	protected:
-		inline virtual void DeleteThis()
+		/** 相等判断
+		*/
+		inline bool operator==(const __FatherPtr<T>& ptr) const
 		{
-			if (m_PtrType == AS_ARRAY)
+			return (m_pPtr == ptr.m_pPtr);
+		}
+		/** 相等判断
+		*/
+		inline bool operator==(const T* ptr) const
+		{
+			return (m_pPtr == ptr);
+		}
+		/** 不等判断
+		*/
+		inline bool operator!=(const __FatherPtr<T>& ptr) const
+		{
+			return !operator==(ptr);
+		}
+		/** 不等判断
+		*/
+		inline bool operator!=(const T* ptr) const
+		{
+			return !operator==(ptr);
+		}
+		/** 布尔判断
+		*/
+		inline bool operator!() const
+		{
+			return IsNULL();
+		}
+
+	protected:
+		template <typename B>
+		inline void _Bind(B* ptr, std::list<void *>* pList)
+		{
+			if (IsNoNULL())
 			{
-				delete[] m_pPtr;
+				Destroy();
+			}
+			if (ptr == NULL)
+			{
+				return;
+			}
+
+			m_pPtr = ptr;
+			if (pList != NULL)
+			{
+				m_pList = pList;
 			}
 			else
 			{
-				delete m_pPtr;
+				m_pList = new std::list<void*>;
 			}
+			m_pList->push_back(this);
 		}
+
+		inline void _ClearThis()
+		{
+			m_pPtr = NULL;
+			m_pList = NULL;
+		}
+		//	Function Object（函数对象）
+		struct ClearPtr
+		{
+		public:
+			inline void operator()(void* ptr) const
+			{
+				((__FatherPtr<T>*)ptr)->_ClearThis();
+			}
+		};
+	private:
+		//	不允许其他类型进行赋值操作
+		//template <typename B>
+		//inline __FatherPtr(B* ptr) {};
+		//template <typename B>
+		//inline __FatherPtr(const __FatherPtr<B>& ptr) {};
+		//template <typename B>
+		//inline __FatherPtr<T>& operator=(B* ptr)
+		//{
+		//	return *this;
+		//}
+		//template <typename B>
+		//inline __FatherPtr<T>& operator=(const __FatherPtr<B>& ptr)
+		//{
+		//	return *this;
+		//}
 	};
+
+
+
 
 
 
@@ -409,31 +338,39 @@ namespace ssa
 	@see xmPtr<T[]>
 	*******************************************************************************/
 	template <typename T>
-	class xmPtr : public __ObjectPtr<T>
+	class xmPtr : public __FatherPtr<T>
 	{
 		friend xmPtr<const T>;
+		friend xmPtr <T[]>;
 	public:
-		/** 使用基础类指针构造
-		@param [in] ptr
-			基础类指针。
-		*/
-		inline xmPtr(T* ptr = NULL) : __ObjectPtr(ptr){};
-		/** 拷贝构造函数
-		@param [in] ptr
-			另一个智能指针。
-		*/
-		inline xmPtr(const xmPtr<T>& ptr) : __ObjectPtr(dynamic_cast<const __ObjectPtr<T>&>(ptr)){};
-		/** 析构函数
-		@param [in] ptr
-			另一个智能指针。
-		*/
+		inline xmPtr() {};
+		inline xmPtr(T* ptr) : __FatherPtr(ptr) {};
+		inline xmPtr(const xmPtr<T>& ptr) : __FatherPtr(dynamic_cast<const __FatherPtr<T>&>(ptr)) {};
 		inline virtual ~xmPtr()	
 		{
-			SetNULL();
+			Destroy();
 		};
-	private:
-		template <typename B>
-		inline xmPtr(const xmPtr<B>& ptr) {};
+	protected:
+		inline virtual void _DeleteThis()
+		{
+			delete m_pPtr;
+		}
+
+	public:
+		/** 使用普通指针对智能指针赋值
+		*/
+		inline xmPtr<T>& operator=(T* ptr)
+		{
+			_Bind(ptr, NULL);
+			return *this;
+		}
+		/** 使用另一个智能指针赋值
+		*/
+		inline xmPtr<T>& operator=(const xmPtr<T>& ptr)
+		{
+			_Bind(ptr.m_pPtr, ptr.m_pList);
+			return *this;
+		}
 	};
 
 
@@ -444,62 +381,46 @@ namespace ssa
 	@see xmPtr
 	*******************************************************************************/
 	template <typename T>
-	class xmPtr<const T> : public __ObjectPtr<const T>
+	class xmPtr<const T> : public __FatherPtr<const T>
 	{
 	public:
-		/** 使用基础类指针构造
-		@param [in] ptr
-		基础类指针。
-		*/
-		inline xmPtr(T* ptr = NULL) : __ObjectPtr(ptr) {};
-		/** 拷贝构造函数
-		@param [in] ptr
-		另一个智能指针。
-		*/
-		inline xmPtr(const xmPtr<const T>& ptr) : __ObjectPtr(dynamic_cast<const __ObjectPtr<const T>&>(ptr)) {};
-		/** 接收普通类型指针
-		@param [in] ptr
-			另一个智能指针。
-		*/
-		inline xmPtr(const xmPtr<T>& ptr) : __ObjectPtr(NULL)
+		inline xmPtr() {};
+		inline xmPtr(T* ptr) : __FatherPtr(ptr) {};
+		inline xmPtr(const T* ptr) : __FatherPtr(ptr) {};
+		inline xmPtr(const xmPtr<T>& ptr) : __FatherPtr()
 		{
-			BindPtr(ptr);
-		};
-		/** 析构函数
-		@param [in] ptr
-		另一个智能指针。
-		*/
+			_Bind(ptr.m_pPtr, ptr.m_pList);
+		}
+		inline xmPtr(const xmPtr<const T>& ptr) : __FatherPtr(dynamic_cast<const __FatherPtr<const T>&>(ptr)) {};
 		inline virtual ~xmPtr() 
 		{
-			SetNULL();
-		};
-
-	private:
-		template <typename B>
-		inline xmPtr(const xmPtr<B>& ptr) {};
-
+			Destroy();
+		}
 	protected:
-		inline bool BindPtr(const xmPtr<T>& ptr)
+		inline virtual void _DeleteThis()
 		{
-			if (ptr.IsNULL())
-			{
-				return false;
-			}
-
-			m_pPtr = ptr.m_pPtr;
-			m_pList = ptr.m_pList;
-			m_pList->push_back(this);
-			m_PtrType = (__GrandPtr<const T>::PTR_TYPE)ptr.m_PtrType;
-			return true;
+			delete m_pPtr;
 		}
 
 	public:
-		/** 使用另一个智能指针赋值
-		*/
+		inline xmPtr<const T>& operator=(T* ptr)
+		{
+			_Bind(ptr, NULL);
+			return *this;
+		}
+		inline xmPtr<const T>& operator=(const T* ptr)
+		{
+			_Bind(ptr, NULL);
+			return *this;
+		}
 		inline xmPtr<const T>& operator=(const xmPtr<T>& ptr)
 		{
-			SetNULL();
-			BindPtr(ptr);
+			_Bind(ptr.m_pPtr, ptr.m_pList);
+			return *this;
+		}
+		inline xmPtr<const T>& operator=(const xmPtr<const T>& ptr)
+		{
+			_Bind(ptr.m_pPtr, ptr.m_pList);
 			return *this;
 		}
 	};
@@ -511,20 +432,34 @@ namespace ssa
 	@see xmPtr
 	*******************************************************************************/
 	template <typename T>
-	class xmPtr<T[]> : public __ObjectPtr<T>
+	class xmPtr<T[]> : public __FatherPtr<T>
 	{
 	public:
-		inline xmPtr(T* ptr = NULL) : __ObjectPtr(ptr){};
-		inline xmPtr(const xmPtr<T[]>& ptr) : __ObjectPtr(dynamic_cast<const __ObjectPtr<T[]>&>(ptr)){};
-		inline virtual ~xmPtr()	{};
-	private:
-		template <typename B>
-		inline xmPtr(const xmPtr<B>& ptr)
+		inline xmPtr() {};
+		inline xmPtr(T* ptr) : __FatherPtr(ptr) {};
+		inline xmPtr(const xmPtr<T[]>& ptr) : __FatherPtr(dynamic_cast<const xmPtr<T[]>&>(ptr)) {};
+		inline virtual ~xmPtr()	
 		{
-			SetNULL();
+			Destroy();
 		};
+	protected:
+		inline virtual void _DeleteThis()
+		{
+			delete[] m_pPtr;
+		}
 
 	public:
+		inline xmPtr<T[]>& operator=(T* ptr)
+		{
+			_Bind(ptr, NULL);
+			return *this;
+		}
+		inline xmPtr<T[]>& operator=(const xmPtr<T[]>& ptr)
+		{
+			_Bind(ptr.m_pPtr, ptr.m_pList);
+			return *this;
+		}
+
 		/** 指针的下标运算符
 		*/
 		inline T& operator[](int pos)
@@ -562,6 +497,25 @@ namespace ssa
 		{
 			return m_pPtr - pos;
 		}
+	};
+
+
+	/******************************************************************************/
+	/** @class xmPtr<void>
+	@brief
+		对 xmPtr<> 专门化，禁止使用void类型指针。
+	@par 多线程安全
+		否
+	@see xmPtr
+	*******************************************************************************/
+	template<>
+	class xmPtr<void>
+	{
+	private:
+		inline xmPtr() {};
+		inline xmPtr(void* ptr) {};
+		inline xmPtr(const xmPtr<void>& ptr) {};
+		inline virtual ~xmPtr() {};
 	};
 }
 

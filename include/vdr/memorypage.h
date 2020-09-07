@@ -3,8 +3,11 @@
 #define __SSA_VDR_MEMORYPAGE_H
 
 #include "../../include/base/sharememory.h"
+
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 #include <atomic>
 #include <shared_mutex>
+#endif
 
 namespace ssa
 {
@@ -49,8 +52,11 @@ namespace ssa
 		bool                 CreateMemory(unsigned int uLength);
 
 	private:
-		//mutable xmMutex   m_Mutex;
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 		mutable std::shared_mutex    m_Mutex;
+#else
+		mutable xmMutex              m_Mutex;
+#endif
 		bool                         m_bCreater;
 
 		//	内存映射文件句柄

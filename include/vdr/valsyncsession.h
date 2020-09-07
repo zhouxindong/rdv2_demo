@@ -29,6 +29,9 @@ namespace ssa
 		virtual bool      HandleSystemSynAsk(const xmPacket& pkt);
 		virtual bool      HandleSystemSynRsp(const xmPacket& pkt);
 
+		virtual bool      HandleDataValSyncAsk(const xmPacket& pkt);
+		virtual bool      HandleDataValSyncRsp(const xmPacket& pkt);
+
 	private:
 		OpcodeHandlerRegistry m_OpcodeHandlerFactory;
 

@@ -1,11 +1,14 @@
 #ifndef __SSA_UMSF_TRIGGER_H
 #define __SSA_UMSF_TRIGGER_H
 #include "isystem.h"
+#include "mtrigger.h"
 #include "tscript.h"
+#include "rtobject.h"
 #include <map>
 
 namespace ssa
 {
+	class xmMrtc;
 	class xmRuntimeGroup;
 
 	//	Trigger Message Code，描述Trigger被触发后，发送给xmMrtc的消息定义，自动进行组的IO
@@ -33,94 +36,196 @@ namespace ssa
 	xmDECLARE_MESSAGE_FUNC(tmTriggerFunc, tmTrigger);
 
 
-	//	描述Trigger被触发后，将要给谁发送消息
-	class xmTriggerTarget
-	{
-	public:
-		xmTriggerTarget(xmMsgHandler* pMrtc, xmRuntimeGroup* pGroup) : m_pMrtc(pMrtc), m_pGroup(pGroup)
-		{
-			xmAssert(m_pMrtc != NULL);
-			xmAssert(m_pGroup != NULL);
-		};
-		xmTriggerTarget(const xmTriggerTarget& target) : m_pMrtc(target.m_pMrtc), m_pGroup(target.m_pGroup)
-		{
-		};
-		void Post()
-		{
-			m_pMrtc->PostMsg(tmTrigger(m_pGroup));
-		}
-		bool IsEnabled() const;
-		xmEIOType IOType() const;
-	private:
-		xmMsgHandler* const m_pMrtc;		//	哪个模型运行环境
-		xmRuntimeGroup* const m_pGroup;		//	哪个模型数据组
-	};
-
 	//	触发器，由xmModelTrigger生成，附带了运行信息
 	//	每一个数据组定义的触发器，都会生成一个触发器，
 	//	多个触发器可以共同使用一个触发器容器
 	class xmModelTrigger;
-	class xmTrigger
+	class xmTrigger : public xmRuntimeObject
 	{
 	public:
 		virtual ~xmTrigger();
-		virtual xmEMsgHandleObject Type() const = 0;
+		virtual const xmString& Name() const;
+	protected:
+		virtual void _MakeFlag() const;
 
-		void PostTriggerMessgae(const xmValue* pParam)
-		{
-			try
-			{
-				if (IsScriptPass(pParam))
-				{
-					m_TriggerTarget.Post();
-				}
-			}
-			catch (xmExLuaExecute& e)
-			{
-				xmString strTitle = xmStringUtil::Format("%s::%s::%s", 
-					m_strModelName.String(), 
-					m_strInstanceName.String(),
-					m_strGroupName.String());
-				xmLog::error(strTitle, "Trigger script execute failed(%d): %s",
-					e.Code(),
-					e.Message());
-			}
-		}
-		bool IsTargetEnabled() const
-		{
-			return m_TriggerTarget.IsEnabled();
-		}
-		xmEIOType TargetIOType() const
-		{
-			return m_TriggerTarget.IOType();
-		}
+	public:
+		static xmTrigger* Create(xmMrtc* pMrtc, xmRuntimeGroup* pGroup, const xmModelTrigger* pModelTrigger);
+		virtual xmETriggerType Type() const = 0;
+		virtual const xmModelTrigger* ModelTrigger() const = 0;
 
-		bool IsScriptPass(const xmValue* pParam)
-		{
-			if (m_pScript == NULL)
-			{
-				return true;
-			}
-			return m_pScript->IsTriggered(pParam);
-		}
+		bool IsTargetEnabled() const;
+		xmEIOType TargetIOType() const;
+		bool IsScriptPass(const xmValue* pParam);
+		void PostTriggerMessgae(const xmValue* pParam);
 
-		static xmTrigger* Create(const char* strModelName, const char* strInstanceName, const char* strGroupName, const xmModelTrigger* pModelTrigger, const xmTriggerTarget& target, xmMrtc* pMrtc);
-		virtual void MatchData(const xmString& strMatchName) = 0;
-
+		const char* PrintType() const;
 		const xmString& PrintTrigger() const;
 		const xmString& PrintParam() const;
 		const xmString& PrintScript() const;
 
-		const xmString m_strModelName;
-		const xmString m_strInstanceName;
-		const xmString m_strGroupName;
+		xmRet GetLastErrorCode_Trigger() const
+		{
+			return m_nLEC_Trigger;
+		}
+		const xmString& GetLastErrorMessage_Trigger() const
+		{
+			return m_strLEM_Trigger;
+		}
 	protected:
-		xmTrigger(const char* strModelName, const char* strInstanceName, const char* strGroupName, const xmModelTrigger* pModelTrigger, const xmTriggerTarget& target);
-
-		const xmModelTrigger* const m_pModelTrigger;
-		xmTriggerTarget m_TriggerTarget;
+		xmTrigger(xmMrtc* pMrtc, xmRuntimeGroup* pGroup);
+		xmRuntimeGroup* const m_pGroup;		//	哪个模型数据组
 		xmTriggerScript* m_pScript;
+
+		//	last error code
+		xmRet m_nLEC_Trigger;
+		xmString m_strLEM_Trigger;
 	};
+	class xmTimeTrigger : public xmTrigger
+	{
+	public:
+		xmTimeTrigger(xmMrtc* pMrtc, xmRuntimeGroup* pGroup, const xmModelTrigger* pModelTrigger) :
+			xmTrigger(pMrtc, pGroup),
+			m_pModelTrigger(dynamic_cast<const xmTimeModelTrigger*>(pModelTrigger))
+		{
+		};
+		virtual ~xmTimeTrigger()
+		{
+		};
+		virtual const xmModelTrigger* ModelTrigger() const
+		{
+			return m_pModelTrigger;
+		}
+		virtual xmETriggerType Type() const
+		{
+			return m_pModelTrigger->Type();
+		}
+		//	单位：毫秒
+		unsigned int Time() const
+		{
+			return m_pModelTrigger->m_uTime;
+		}
+		//	单位：节拍数
+		unsigned int Click() const
+		{
+			return m_pModelTrigger->m_uClick;
+		}
+	protected:
+		const xmTimeModelTrigger* const m_pModelTrigger;
+	};
+	class xmEventTrigger : public xmTrigger
+	{
+	public:
+		xmEventTrigger(xmMrtc* pMrtc, xmRuntimeGroup* pGroup, const xmModelTrigger* pModelTrigger) :
+			xmTrigger(pMrtc, pGroup),
+			m_pModelTrigger(dynamic_cast<const xmEventModelTrigger*>(pModelTrigger))
+		{
+		};
+		virtual ~xmEventTrigger()
+		{
+		};
+		virtual const xmModelTrigger* ModelTrigger() const
+		{
+			return m_pModelTrigger;
+		}
+		virtual xmETriggerType Type() const
+		{
+			return m_pModelTrigger->Type();
+		}
+
+		smSystemEvent::ESEType Event() const
+		{
+			return m_pModelTrigger->m_eEvent;
+		}
+		const xmString& EventName() const
+		{
+			return m_pModelTrigger->m_Name;
+		}
+		const xmValue& EventParam() const
+		{
+			return m_pModelTrigger->m_Param;
+		}
+	protected:
+		const xmEventModelTrigger* const m_pModelTrigger;
+	};
+	class xmCommandTrigger : public xmTrigger
+	{
+	public:
+		xmCommandTrigger(xmMrtc* pMrtc, xmRuntimeGroup* pGroup, const xmModelTrigger* pModelTrigger) :
+			xmTrigger(pMrtc, pGroup),
+			m_pModelTrigger(dynamic_cast<const xmCommandModelTrigger*>(pModelTrigger))
+		{
+		};
+		virtual ~xmCommandTrigger()
+		{
+		};
+		virtual const xmModelTrigger* ModelTrigger() const
+		{
+			return m_pModelTrigger;
+		}
+		virtual xmETriggerType Type() const
+		{
+			return m_pModelTrigger->Type();
+		}
+
+		smCtrlCommand::ECCType Command() const
+		{
+			return m_pModelTrigger->m_eCommand;
+		}
+		const xmString& CommandName() const
+		{
+			return m_pModelTrigger->m_Name;
+		}
+		const xmValue& CommandParam() const
+		{
+			return m_pModelTrigger->m_Param;
+		}
+	protected:
+		const xmCommandModelTrigger* const m_pModelTrigger;
+	};
+	class xmDataTrigger : public xmTrigger
+	{
+	public:
+		xmDataTrigger(xmMrtc* pMrtc, xmRuntimeGroup* pGroup, const xmModelTrigger* pModelTrigger);
+		virtual ~xmDataTrigger()
+		{
+		};
+		virtual const xmModelTrigger* ModelTrigger() const
+		{
+			return m_pModelTrigger;
+		}
+		virtual xmETriggerType Type() const
+		{
+			return m_pModelTrigger->Type();
+		}
+		void MatchData(const xmString& strMatchName);
+
+		const xmString& DataName() const
+		{
+			return m_pModelTrigger->m_Name;
+		}
+		const xmString& MatchName() const
+		{
+			return m_strMatchName;
+		}
+		//	如果数据被匹配到一个属性，则此处表示这个属性的名称
+		const xmString& PropertyName() const
+		{
+			return m_strPropertyName;
+		}
+		const xmValue& ParamValue() const
+		{
+			return m_pModelTrigger->m_Value;
+		}
+		bool iProcessor_System2Model() const;
+		xmRet iProcessor_System2Model(const xmValue& systemValue, xmValue& modelValue);
+	protected:
+		const xmDataModelTrigger* const m_pModelTrigger;
+	private:
+		xmString m_strMatchName;
+		xmRuntimeData* const m_pRtData;
+		xmString m_strPropertyName;
+	};
+
 
 
 	//	触发器容器，每个触发器容器使用独立线程工作，监视触发条件
@@ -129,17 +234,23 @@ namespace ssa
 	class xmTriggerContainer
 	{
 	public:
-		virtual xmEMsgHandleObject Type() const = 0;
-	protected:
-		xmTriggerContainer()
-		{
-			xmPREPARE_RUN(TRIGGER_ETS);
-		};
+		xmTriggerContainer() {};
 		virtual ~xmTriggerContainer() {};
-		xmCALC_RUNTIME(TRIGGER_ETS);
+		//	添加触发器
+		virtual void AddTrigger(xmTrigger* pTrigger) = 0;
+		//	获取触发器类型
+		virtual xmETriggerType Type() const = 0;
+		//	获取此容器中的触发器数量
+		virtual size_t GetTriggerCount() const = 0;
+		//	获取此容器中的某个触发器
+		virtual const xmTrigger* GetTrigger(size_t uPos) const = 0;
+		//	进行触发器计算
+		virtual void OnTrigger(const xmMessage& aMsg) = 0;
 	};
 
+	
 	//	模型驱动节拍Trigger Message Code
+	//	由于时钟驱动的组IO要区分输入组和输出组，因此重新定义了tmDriveClick消息
 	#define tmC_DRIVE_CLICK 0x2100
 	class tmDriveClick : public xmMessage
 	{
@@ -169,30 +280,25 @@ namespace ssa
 		xmDECLARE_MESSAGE_CLASS(tmC_DRIVE_CLICK);
 	};
 	xmDECLARE_MESSAGE_FUNC(tmDriveClickFunc, tmDriveClick);
-
-
-	class xmTimeTriggerContainer : public xmMsgHandler, public xmTriggerContainer
+	class xmTimeTriggerContainer : public xmTriggerContainer
 	{
 	public:
 		xmTimeTriggerContainer() : xmTriggerContainer() {};
-		virtual ~xmTimeTriggerContainer()
+		virtual ~xmTimeTriggerContainer() {};
+		//	添加一个时间触发，wParam表示网络节拍的周期，单位：ms。
+		virtual void AddTrigger(xmTrigger* pTrigger);
+		virtual xmETriggerType Type() const
 		{
-			xmMH_DESTRUCT_IMMEDIATELY();	// or xmMH_DESTRUCT_WAIT_IDLE();
-		};
-		virtual xmEMsgHandleObject Type() const
-		{
-			return MHO_TIME_TRIGGER;
+			return TT_TIME_TRIGGER;
 		}
-
-		//	添加一个时间触发，uClickCycle表示网络节拍的周期，单位：ms。
-		void AddTrigger(xmTrigger* pTrigger, unsigned int uClickCycle);
-
-	public:
-		//	获取一个节拍触发器节拍触发的个数，单位：个
-		size_t GetTriggerCount() const
+		virtual size_t GetTriggerCount() const
 		{
 			return m_vTrigger.size();
 		}
+		virtual const xmTrigger* GetTrigger(size_t uPos) const;
+		virtual void OnTrigger(const xmMessage& aMsg);
+
+	public:
 		//	获取一个节拍触发器在模型中描述的触发周期，单位：ms
 		unsigned int GetTriggerTime(size_t uPos) const;
 		//	获取一个节拍触发器在系统中实际的触发周期，单位：节拍数
@@ -200,188 +306,109 @@ namespace ssa
 		{
 			return m_vTrigger[uPos]->first;
 		}
-		//	获取一个节拍触发器描述
-		const xmTrigger* GetTrigger(size_t uPos) const
-		{
-			return m_vTrigger[uPos]->second;
-		}
 
-		//	启动工作负载统计
-		void StartWLS(unsigned int uTime)
-		{
-			StartWorkLoadStatistics(uTime, (xmThreadw::OnWLSDoneFunc)__log_WLS, this);
-		}
-
-		//	消息响应函数执行时间
-		void ExecuteTimeStatistics(size_t uPos, bool bDo)
-		{
-			m_bExecuteTime[uPos] = bDo;
-		}
-		double ExecuteTime(size_t uPos)
-		{
-			return m_fExecuteTime[uPos];
-		}
 	private:
-		//	模型消息响应的处理时间，单位：毫秒
-		std::vector<bool>   m_bExecuteTime;
-		std::vector<double> m_fExecuteTime;
-
-		//	m_mapDescribe中的key表示节拍数
-		std::multimap<unsigned int, xmTrigger*> m_mapTrigger;
-		std::vector<std::multimap<unsigned int, xmTrigger*>::iterator> m_vTrigger;
-
-		//	记录消息响应函数执行耗时
-		void __log_ETS(size_t uPos, size_t uClickCount);
-		static void __log_WLS(double fWLPrecent, void* pParam)
-		{
-			xmLog::info("TimeTrigger", "Work load %.2f%% pre second.", ((xmMsgHandler*)pParam)->WorkLoad());
-		}
-	private:
-		void __OnDriveClick(const tmDriveClick& aMsg, std::multimap<unsigned int, xmTrigger*>::iterator& pos);
-		void OnDriveClick(const tmDriveClick& aMsg);
-		xmCREATE_MESSAGE_MAP(xmTimeTriggerContainer);
+		typedef std::multimap<unsigned int, xmTimeTrigger*>::iterator t_TargetMapIter;
+		std::multimap<unsigned int, xmTimeTrigger*> m_mapTrigger;
+		std::vector<t_TargetMapIter> m_vTrigger;
 	};
 	
-	class xmEventTriggerContainer : public xmMsgHandler, public xmTriggerContainer
+
+	class xmEventTriggerContainer : public xmTriggerContainer
 	{
 	public:
 		xmEventTriggerContainer() : xmTriggerContainer(){};
 		virtual ~xmEventTriggerContainer() {};
-		virtual xmEMsgHandleObject Type() const
+		virtual void AddTrigger(xmTrigger* pTrigger);
+		virtual xmETriggerType Type() const
 		{
-			return MHO_EVENT_TRIGGER;
+			return TT_EVENT_TRIGGER;
 		}
-
-		void AddTrigger(xmTrigger* pTrigger);
-
-	public:
-		//	获取一个节拍触发器节拍触发的个数，单位：个
-		size_t GetTriggerCount() const
+		virtual size_t GetTriggerCount() const
 		{
 			return m_vTrigger.size();
 		}
+		virtual const xmTrigger* GetTrigger(size_t uPos) const;
+		virtual void OnTrigger(const xmMessage& aMsg);
 
-		unsigned int GetTriggerEvent(size_t uPos) const
+	public:
+		smSystemEvent::ESEType GetTriggerEvent(size_t uPos) const
 		{
 			return m_vTrigger[uPos]->first;
 		}
 		//	获取触发器参数
 		const xmValue& GetTriggerParam(size_t uPos) const;
 
-		const xmTrigger* GetTrigger(size_t uPos) const
-		{
-			return m_vTrigger[uPos]->second.m_pTrigger;
-		}
-
-		//	启动工作负载统计
-		void StartWLS(unsigned int uTime)
-		{
-			StartWorkLoadStatistics(uTime, (xmThreadw::OnWLSDoneFunc)__log_WLS, this);
-		}
-
-		//	消息响应函数执行时间
-		void ExecuteTimeStatistics(size_t uPos, bool bDo)
-		{
-			m_bExecuteTime[uPos] = bDo;
-		}
-		double ExecuteTime(size_t uPos)
-		{
-			return m_fExecuteTime[uPos];
-		}
 	private:
-		//	模型消息响应的处理时间，单位：毫秒
-		std::vector<bool>   m_bExecuteTime;
-		std::vector<double> m_fExecuteTime;
-		//	记录消息响应函数执行耗时
-		void __log_ETS(size_t uPos, unsigned int uEvent);
-		static void __log_WLS(double fWLPrecent, void* pParam)
-		{
-			xmLog::info("EventTrigger", "Work load %.2f%% pre second.", ((xmMsgHandler*)pParam)->WorkLoad());
-		}
-	private:
-		typedef struct __tagTdInfo
-		{
-			__tagTdInfo(xmTrigger* pTrigger, size_t uPos) : m_pTrigger(pTrigger), m_uPos(uPos) {};
-			xmTrigger* m_pTrigger;
-			size_t m_uPos;
-		}STdInfo;
-		typedef std::multimap<unsigned int, STdInfo>::iterator t_TargetMapIter;
-		std::multimap<unsigned int, STdInfo> m_mapTrigger;
+		typedef std::multimap<smSystemEvent::ESEType, xmEventTrigger*>::iterator t_TargetMapIter;
+		std::multimap<smSystemEvent::ESEType, xmEventTrigger*> m_mapTrigger;
 		std::vector<t_TargetMapIter> m_vTrigger;
-
-	private:
-		void OnSystemEvent(const smSystemEvent& aMsg)
-		{
-			OnEvent(smC_SYSTEM_EVENT | aMsg.m_eType, aMsg.m_strName, aMsg.m_vuParam);
-		}
-		void OnCtrlCommand(const smCtrlCommand& aMsg)
-		{
-			OnEvent(smC_CTRL_COMMAND | aMsg.m_eType, aMsg.m_strName, aMsg.m_vuParam);
-		}
-		xmCREATE_MESSAGE_MAP(xmEventTriggerContainer);
-	private:
-		void OnEvent(unsigned int uEvent, const xmString& strName, const xmValue& vuParam);
+		void __OnEvent(smSystemEvent::ESEType eEvent, const xmString& strName, const xmValue& vuParam);
 	};
 
-	class xmDataTriggerContainer : public xmMsgHandler, public xmTriggerContainer
+
+	class xmCommandTriggerContainer : public xmTriggerContainer
 	{
 	public:
-		xmDataTriggerContainer(xmTrigger* pTrigger);
-		virtual ~xmDataTriggerContainer()
+		xmCommandTriggerContainer() : xmTriggerContainer() {};
+		virtual ~xmCommandTriggerContainer() {};
+		virtual void AddTrigger(xmTrigger* pTrigger);
+		virtual xmETriggerType Type() const
 		{
-			xmMH_DESTRUCT_IMMEDIATELY();	// or xmMH_DESTRUCT_WAIT_IDLE();
-		};
-
-		virtual xmEMsgHandleObject Type() const
-		{
-			return MHO_DATA_TRIGGER;
+			return TT_COMMAND_TRIGGER;
 		}
-		//	敏感数据在模型中的名称
-		const xmString& GetDataName() const;
-		//	敏感数据在仿真系统中的匹配名称
-		const xmString& GetMatchName() const;
-
-
-		const xmTrigger* GetTrigger() const
+		virtual size_t GetTriggerCount() const
 		{
-			return m_pTrigger;
+			return m_vTrigger.size();
+		}
+		virtual const xmTrigger* GetTrigger(size_t uPos) const;
+		virtual void OnTrigger(const xmMessage& aMsg);
+
+	public:
+		smCtrlCommand::ECCType GetTriggerCommand(size_t uPos) const
+		{
+			return m_vTrigger[uPos]->first;
 		}
 		//	获取触发器参数
-		const xmValue& GetTriggerParam() const
-		{
-			return m_Value;
-		}
+		const xmValue& GetTriggerParam(size_t uPos) const;
 
-		//	启动工作负载统计
-		void StartWLS(unsigned int uTime)
-		{
-			StartWorkLoadStatistics(uTime, (xmThreadw::OnWLSDoneFunc)__log_WLS, this);
-		}
-
-		//	消息响应函数执行时间
-		void ExecuteTimeStatistics(bool bDo)
-		{
-			m_bExecuteTime = bDo;
-		}
-		double ExecuteTime()
-		{
-			return m_fExecuteTime;
-		}
 	private:
-		//	模型消息响应的处理时间，单位：毫秒
-		bool   m_bExecuteTime;
-		double m_fExecuteTime;
-		//	记录消息响应函数执行耗时
-		void __log_ETS(const xmValue& aValue);
-		static void __log_WLS(double fWLPrecent, void* pParam);
-	private:
-		xmTrigger* m_pTrigger;
-		//const xmString m_Name;	//	数据在仿真系统中的名称
-		const xmValue m_Value;	//	敏感数据的敏感值
+		typedef std::multimap<smCtrlCommand::ECCType, xmCommandTrigger*>::iterator t_TargetMapIter;
+		std::multimap<smCtrlCommand::ECCType, xmCommandTrigger*> m_mapTrigger;
+		std::vector<t_TargetMapIter> m_vTrigger;
+		void __OnCommand(smCtrlCommand::ECCType eCommand, const xmString& strName, const xmValue& vuParam);
+	};
 
-		bool __OnDataUpdate(const xmValue& aValue);
-		void OnDataUpdate(const smDataUpdate& aMsg);
-		xmCREATE_MESSAGE_MAP(xmDataTriggerContainer);
+
+	class xmDataTriggerContainer : public xmTriggerContainer
+	{
+	public:
+		xmDataTriggerContainer() : xmTriggerContainer() {};
+		virtual ~xmDataTriggerContainer() {};
+		virtual void AddTrigger(xmTrigger* pTrigger);
+		virtual xmETriggerType Type() const
+		{
+			return TT_DATA_TRIGGER;
+		}
+		virtual size_t GetTriggerCount() const
+		{
+			return m_vTrigger.size();
+		}
+		virtual const xmTrigger* GetTrigger(size_t uPos) const;
+		virtual void OnTrigger(const xmMessage& aMsg);
+
+	public:
+		//	敏感数据在模型中的名称
+		const xmString& GetDataName(size_t uPos) const;
+		//	敏感数据在仿真系统中的匹配名称
+		const xmString& GetMatchName(size_t uPos) const;
+		//	获取触发器参数
+		const xmValue& GetTriggerParam(size_t uPos) const;
+
+	private:
+		typedef std::multimap<xmString, xmDataTrigger*>::iterator t_TargetMapIter;
+		std::multimap<xmString, xmDataTrigger*> m_mapTrigger;
+		std::vector<t_TargetMapIter> m_vTrigger;
 	};
 }
 

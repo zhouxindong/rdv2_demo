@@ -26,7 +26,7 @@ namespace ssa
 	/**
 	*  数据集属性描述信息。
 	*/
-	struct xmDataSetAttr
+	struct xmVDR_EXPORT xmDataSetAttr
 	{
 	public:
 		//数据集的名字不能超过8个汉字
@@ -39,24 +39,27 @@ namespace ssa
 		/**
 		* 所属作用域。
 		*/
-		unsigned short         m_uRegion = 0;
+		unsigned short         m_uRegion;// = 0;
 		/**
 		* 数据集死亡的时间。
 		*/
-		unsigned int           m_uDeadTime = 0xFFFFFFFF;
+		unsigned int           m_uDeadTime;// = 0xFFFFFFFF;
 		/**
 		* 同步时间周期，默认为1个周期。
 		*/
-		unsigned int		   m_uSyncTime = 1;
+		unsigned int		   m_uSyncTime;// = 1;
 		/**
 		* 数据集类型。
 		*/
-		xmEDataSetType         m_eType = xmEDataSetType::xmEDST_RW;
+		xmEDataSetType         m_eType;// = xmEDataSetType::xmEDST_RW;
 		/**
 		* 全局信息是否自动分配。
 		* 需要从服务器分配资源还是客户端制定，1表示自动分配。
 		*/
-		unsigned int           m_uAutoAlloc = 1;
+		unsigned int           m_uAutoAlloc;// = 1;
+
+	public:
+		xmDataSetAttr();
 	};
 #pragma pack()
 
@@ -111,11 +114,11 @@ namespace ssa
 		/**
 		* 内存版本信息。
 		*/
-		unsigned char            m_nMemVersion = 0;;
+		unsigned char            m_nMemVersion;
 		/**
 		* 数据集中数据排列索引版本信息。
 		*/
-		unsigned char            m_nIndexVersion = 0;
+		unsigned char            m_nIndexVersion;
 	};
 }
 

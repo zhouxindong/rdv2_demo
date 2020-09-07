@@ -3,15 +3,21 @@
 
 #include "export.h"
 #include "../base/async.h"
-#include <map>
+#include <unordered_map>
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 #include <shared_mutex>
+#endif
 
 namespace ssa
 {
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 	template<class T, class Key = std::string,class Mutex = std::shared_mutex>
+#else
+	template<class T, class Key = std::string,class Mutex = xmMutex/*std::shared_mutex*/>
+#endif
 	class xmObjectRegistry
 	{
-		typedef std::map<Key, T *> RegistryMapType;
+		typedef std::unordered_map<Key, T *> RegistryMapType;
 		RegistryMapType m_registeredObjects;
 		mutable Mutex   m_Mutex;
 		unsigned int    m_nSN;
@@ -27,7 +33,11 @@ namespace ssa
 
 		T* GetRegistryItem(Key key) const
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::shared_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			typename RegistryMapType::const_iterator iter = m_registeredObjects.find(key);
 			T* p = ( iter == m_registeredObjects.end() ? 0 : iter->second );
 			return p;
@@ -35,7 +45,11 @@ namespace ssa
 
 		T* GetItemByIndex(unsigned int nIndex)
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::shared_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			if (nIndex >= 0 && nIndex < m_registeredObjects.size())
 			{
 				typename RegistryMapType::const_iterator iter = m_registeredObjects.begin();
@@ -48,7 +62,11 @@ namespace ssa
 
 		bool InsertItem(T *obj, Key key, bool cover = false)
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::unique_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			typename RegistryMapType::iterator iter = m_registeredObjects.find(key);
 			if( iter != m_registeredObjects.end() )
 			{
@@ -68,7 +86,11 @@ namespace ssa
 
 		void RemoveItem(Key key, bool delete_object = false)
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::unique_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			typename RegistryMapType::iterator iter = m_registeredObjects.find(key);
 			if( iter != m_registeredObjects.end() )
 			{
@@ -81,7 +103,11 @@ namespace ssa
 
 		void RemoveAllItems(bool delete_object = false)
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::unique_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			if (delete_object)
 			{
 				typename RegistryMapType::iterator iter = m_registeredObjects.begin();
@@ -101,14 +127,22 @@ namespace ssa
 
 		bool HasItem(Key key) const
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::shared_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			bool b = (m_registeredObjects.find(key) != m_registeredObjects.end());
 			return b;
 		}
 
 		unsigned int GetRegisteredKeys(std::vector<Key> &l) const
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::shared_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			unsigned int sz = l.size();
 			l.resize(sz + m_registeredObjects.size());
 			for(typename RegistryMapType::const_iterator iter = m_registeredObjects.begin(); iter != m_registeredObjects.end(); ++iter)
@@ -118,7 +152,11 @@ namespace ssa
 
 		unsigned int GetRegisteredItems(std::vector<T*> &l) const
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本		
 			std::shared_lock<std::shared_mutex> guard(m_Mutex);
+#else
+			xmMutex::Guard guard(m_Mutex);
+#endif
 			unsigned int sz = l.size();
 			l.resize(sz + m_registeredObjects.size());
 			for (typename RegistryMapType::const_iterator iter = m_registeredObjects.begin(); iter != m_registeredObjects.end(); ++iter)
@@ -128,13 +166,17 @@ namespace ssa
 
 		unsigned int GetLatestSN()
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 			std::shared_lock<std::shared_mutex> guard(m_Mutex);
+#endif
 			return m_nSN;
 		}
 
 		unsigned int GetSize()
 		{
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 			std::shared_lock<std::shared_mutex> guard(m_Mutex);
+#endif
 			return m_registeredObjects.size();
 		}
 	};

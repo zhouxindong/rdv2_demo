@@ -1,4 +1,3 @@
-
 // rdv2_tick.cpp : Defines the entry point for the console application.
 //
 
@@ -43,8 +42,8 @@ public:
 		//	}
 		//}
 
-		std::cout << t.m_lAbsTime << '\n';
-		std::cout << t.m_lTimeCount << '\n';
+		std::cout << t.m_lTimeStamp << '\n';
+		std::cout << t.m_lFrameCount << '\n';
 		std::cout << t.m_nSyncCycles << '\n';
 		std::cout << t.m_nTickTime << '\n';
 	}

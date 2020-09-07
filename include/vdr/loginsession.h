@@ -75,6 +75,8 @@ namespace ssa
 
 		virtual bool		HandleCommIsOKAsk(const xmPacket& pkt);
 		virtual bool		HandleCommIsOKRsp(const xmPacket& pkt);
+
+		virtual bool		HandleServerStopRsp(const xmPacket& pkt);
 		//仅仅是为了代码组织上的简洁而单独作为一个函数
 		void                SendInfo(xmSyncDataPacket* lpkt, xmDataSetWithDetail* pds);
 	private:

@@ -15,7 +15,6 @@ typedef struct __tagxmDataItem {
 	struct xmData dtData;
 	xmValue dtValue;
 } DataItem;
-
 typedef std::vector<DataItem> DataAttrVector;
 
 typedef struct __tagDataSetAttrItem {
@@ -23,7 +22,14 @@ typedef struct __tagDataSetAttrItem {
 	struct xmDataSetAttr dsAttr;
 	DataAttrVector vecDataAttr;
 } DataSetAttrItem;
-typedef std::vector<DataSetAttrItem*> DSAttrITemVector;
+typedef std::vector<DataSetAttrItem*> DSAttrItemVector;
+
+typedef struct __tagNodeItem {
+	std::string ndName;
+	xmNode ndNode;
+} NodeItem;
+typedef std::vector<NodeItem> NodeItemVector;
+
 typedef std::vector<std::string> VdrNameVector;
 
 class xmCONFIG_EXPORT xmVDRConfig
@@ -36,14 +42,15 @@ public:
 	xmEVDRCommProxyType Open(std::string vdrFile);
 	bool GetLanVDRAttr(xmMCastVDRAttr& vdrAttr);
 	bool GetLocalVDRAttr(xmLocalVDRAttr& vdrAttr);
-	bool GetDSAItemVector(DSAttrITemVector& dsaiVector);
-	void ReleaseDSAItemVector(DSAttrITemVector& dsaiVector);
+	bool GetDSAItemVector(DSAttrItemVector& dsaiVector);
+	void ReleaseDSAItemVector(DSAttrItemVector& dsaiVector);
+	bool GetNodeItemVector(NodeItemVector& nodeVector);
 	bool GetApDataSet(std::string& strName);
 	bool GetApSensDatas(VdrNameVector& vecNames);
 	/*ToJsonString,0存到数据文件，1只返回字符串，2数据文件和字符串都返回。*/
-	std::string Save(std::string saveFile, VdrNameVector& senstives, DSAttrITemVector& datasets, xmLocalVDRAttr& vdratts, int ToJsonString = 0);
+	std::string Save(std::string saveFile, VdrNameVector& senstives, NodeItemVector& nodes, DSAttrItemVector& datasets, xmLocalVDRAttr& vdratts, int ToJsonString = 0);
 	/*ToJsonString,0存到数据文件，1只返回字符串，2数据文件和字符串都返回。*/
-	std::string Save(std::string saveFile, VdrNameVector& senstives, DSAttrITemVector& datasets, xmMCastVDRAttr& vdratts, int ToJsonString = 0);
+	std::string Save(std::string saveFile, VdrNameVector& senstives, NodeItemVector& nodes, DSAttrItemVector& datasets, xmMCastVDRAttr& vdratts, int ToJsonString = 0);
 
 
 	std::string Convert2String(xmEDataType dt);
@@ -63,7 +70,8 @@ private:
 	xmEDataType Convert2DataType(std::string& dtString);
 	bool GetDataItem(void* dtValuePtr, DataItem& di);
 	bool GetDataAttrVector(void* daVecValuePtr, DataAttrVector& dsVec);
-	void SaveData(void* root,VdrNameVector& senstives, DSAttrITemVector& datasets);
+	void SaveData(void* root,VdrNameVector& senstives, DSAttrItemVector& datasets);
+	void SaveNode(void* root, NodeItemVector& nodes);
 
 private:
 	void* rootVPtr;

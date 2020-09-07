@@ -9,13 +9,15 @@ namespace tinyxml2
 }
 namespace ssa
 {
+	class xmUMSF;
 	class xmMdi;
 	class xmModelData
 	{
+		friend xmUMSF;
 		friend xmMdi;
 	public:
 		xmModelData(tinyxml2::XMLElement* xmlElement) : 
-			m_pModelClass(NULL), m_pInitValue(NULL), m_xmlElement(xmlElement), m_uAutoReset(0), m_eIOType(IOT_INNER)
+			m_pModelClass(NULL), m_pInitValue(NULL), m_xmlElement(xmlElement), m_uAutoReset(0), m_eIOType(IOT_INNER), m_eCheckType(DCT_AUTO)
 		{};
 		~xmModelData()
 		{
@@ -67,6 +69,10 @@ namespace ssa
 		{
 			return m_eIOType;
 		}
+		xmEDataCheckType CheckType() const
+		{
+			return m_eCheckType;
+		}
 
 		unsigned int AddTag(const xmStringVector& vTagInfo);
 		bool UpdateTaggedIndex(const xmString& strTagName, unsigned int uTaggedIndex);
@@ -109,6 +115,7 @@ namespace ssa
 		const xmValue* m_pInitValue;		//	使用上述结构的默认初始值
 		unsigned int m_uAutoReset;			//	数据在模型缓存中自动复位设置，表示该输出数据经过多少次输出到系统后，复位为初始值
 		xmEIOType m_eIOType;				//	数据的输入输出类型
+		xmEDataCheckType m_eCheckType;		//	数据IO时类型检查的方式
 		//	key为标签名称，value为这个数据在该标签中的遍历序号
 		//	指定的序号，应小于0x80000000，未指定的序号，由0x80000000开始自增
 		xmOrderMap<xmString, unsigned int> m_mapDataTag; //	数据标签，一个模型数据，可以设置多个数据标签

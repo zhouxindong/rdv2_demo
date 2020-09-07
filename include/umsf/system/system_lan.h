@@ -18,7 +18,7 @@ public:
 public:
 	virtual xmString Version()
 	{
-		return "VDR Communication V5.0";
+		return "VDR V5.0";
 	};
 	virtual xmRet Login(const xmString& strNodeID, const xmString& strAttribute = NULL);
 	virtual xmRet Logout();
@@ -30,8 +30,11 @@ public:
 
 	virtual void  ReadyToGo();
 
-	virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue);
-	virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue);
+	virtual void  SetClearFlag(bool bClear) { m_bClear = bClear; };
+	virtual bool  GetClearFlag() const { return m_bClear; };
+
+	virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO);
+	virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO);
 
 	virtual unsigned int GetSimulateState(void) const
 	{
@@ -53,6 +56,8 @@ public:
 	{ 
 		return m_uSystemTime; 
 	};
+
+	virtual xmRet SyncDate(const xmString& strDataName = xmString(), int nDirction = (IOT_INPUT | IOT_OUTPUT));
 
 	virtual xmString PrintData(const xmString& strDataName = NULL);
 
@@ -88,11 +93,16 @@ private:
 	std::vector<xmMsgHandler*> m_vHandler;
 	//	VDR属性
 	xmMCastVDRAttr m_LanAttr;
+	//	登录时最长等待时间
+	long m_nWaitTIme;
 	//	节点属性
 	xmNode m_Node;
-	//	数据集属性
-	xmDataSet m_DataSet;
+	//	数据集，key为数据集的配置名称
+	std::map<std::string, xmPtr<xmDataSet>> m_mapDataSet;
+	//	输入为数据集配置名称，在函数中将转换为数据集VDR名称
+	xmDataSet* __AddDataSet(const std::string& strName);
 
+	bool m_bClear;
 
 	//	节拍计数器
 	unsigned int m_uClickCycle;
@@ -103,6 +113,13 @@ private:
 	//	记录系统状态和仿真倍速
 	unsigned int m_uSimuState;
 	int m_nSimuSpeed;
+	//	系统中，表示这两个参数的数据名称
+	xmString m_strSimuState;
+	xmString m_strSimuSpeed;
+
+
+	int m_nLEC_System;
+
 
 	//	指令与事件映射表
 	typedef struct _tagMsgObject
@@ -114,11 +131,19 @@ private:
 		xmString m_strParam;
 		xmValue  m_ctrlValue;	//	xmValue描述的命令数值，由于创建时，不知道数据类型，所以需要在运行过程中初始化。
 	}MsgObject;
+	//	训练开始指令
+	xmString m_strStartMsgDataName;
+	xmPtr<MsgObject> m_pStartMsgObject;
 	std::multimap<xmString, xmPtr<MsgObject> > m_mapMsgObject;
+	bool __IsCmdArrived(const xmValue& sensValue, MsgObject* pObject);
+
 	xmRet __LoadVdr(const Json::Value& jvObject);
 	xmRet __LoadCommand(const Json::Value& jvObject);
+	xmRet __LoadState(const Json::Value& jvObject);
 	MsgObject* __LoadObject(const Json::Value& jvObject);
 	std::map<xmString, bool> m_mapUserSensitive;	//	标记一个仿真系统敏感的命令数据，用户是否也注册了敏感
+
+	void __UpdateSystemState();
 };
 #endif  //  __UMSF_SYSTEM_LAN_H
 

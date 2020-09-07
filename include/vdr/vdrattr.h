@@ -37,7 +37,7 @@ namespace ssa
 		xmEVDRCommProxyType     m_eCommType;
 		/**
 		* 角色定义。
-		* 区分当前VDR接口在进程中所扮演的角色，可以是服务器、单数据集合以及运行时环境RTE。
+		* 区分当前VDR接口在进程中所扮演的角色，可以是服务器、单数据集合以及运行时环境RTE还是管理工具端。
 		*/
 		xmEEndpointType         m_eEndpointType;
 	};

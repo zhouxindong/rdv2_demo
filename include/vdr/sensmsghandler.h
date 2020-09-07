@@ -8,6 +8,7 @@
 #include "sensmsgs.h"
 #include "memorypage.h"
 #include "isensmsgproxy.h"
+#include "packet.h"
 
 namespace ssa
 {
@@ -83,18 +84,20 @@ namespace ssa
 		xmLogHandlers            m_LogHandlers;
 		xmMCast2NodesHandlers    m_MCast2NodesHandlers;
 
-		void SensTickCallBack(int nTickTime,int nSyncCycles, long long lAbsTime);
-		void SensValueSyncTickCallBack(int nTickTime,int nSyncCycles, long long lAbsTime);
-		//按照数据集合的范围进行回调，因为值是按照数据集合进行同步的。
-		void SensValSyncMsgCallBack(const std::string& strDataSetName, xmByteBuffer bbValue, long long  lAbsTime);
-		void SensValCallBack(const std::string& strDataSetName, xmByteBuffer bbValue, long long  lAbsTime);
+		void SensTickCallBack(const xmPacket& pkt/*int nTickTime,int nSyncCycles, long long lAbsTime*/);
+		void SensValueSyncTickCallBack(const xmPacket& pkt/*int nTickTime,int nSyncCycles, long long lAbsTime*/);
+		//按照数据集合的范围进行回调，因为值是按照数据集合进行同步的,nEventCode表明此数据中含有用户需要的敏感事件信息
+		void SensValSyncMsgCallBack(const std::string& strDataSetName, const xmByteBuffer& bbValue, const xmTimeStamp& ets,int nEventCode,unsigned char cQos);
+		//通过返回值判断发生了什么事情，一个bit标识一种事件，bit0标识是否有更新，bit1标识是否有复位事件。
+		int  SensDSValCallBack(const std::string& strDataSetName, const xmByteBuffer& bbValue, const xmTimeStamp& ets);
+		void SensDataValCallBack(const std::string& strDataName, const xmByteBuffer& bbValue, const xmTimeStamp& ets);
 		//当数据信息有变化时，回调
-		void SensDataCallBack(const std::string& strName, xmEDataEvent ee);
-		void SensDataSetCallBack(const std::string& strName, xmEDataSetEvent ee);
-		void SensNodeCallBack(const std::string& strName, xmENodeEvent ee);
-		void SensMCastMSGCallBack(const std::string& strSender, const xmByteBuffer& dbContent, xmEMCastMSGEvent ee);
-		void SensLogCallBack(const std::string& strLog);
-		void SensSwitchSystemStateCallBack(xmESystemState es);
+		void SensDataCallBack(const std::string& strName, xmEDataEvent ee, const xmTimeStamp& ets);
+		void SensDataSetCallBack(const std::string& strName, xmEDataSetEvent ee, const xmTimeStamp& ets);
+		void SensNodeCallBack(const std::string& strName, xmENodeEvent ee, const xmTimeStamp& ets);
+		void SensMCastMSGCallBack(const std::string& strSender, const xmByteBuffer& dbContent, xmEMCastMSGEvent ee, const xmTimeStamp& ets);
+		void SensLogCallBack(const std::string& strLog, const xmTimeStamp& ets);
+		void SensSwitchSystemStateCallBack(xmESystemState es, const xmTimeStamp& ets);
 
 		void Clear();
 

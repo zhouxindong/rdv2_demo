@@ -4,7 +4,7 @@
   <ID DESC="VDR ID" INIT="1811">VDR_id</ID>
   <ID DESC="VDR组播地址" INIT="224.0.0.155">VDR_group_ip</ID>
   <ID DESC="VDR组播端口" INIT="9000">VDR_group_port</ID>
-  <ID DESC="VDR本机地址" INIT="10.16.2.55">VDR_local_ip</ID>
+  <ID DESC="VDR本机地址" INIT="10.16.2.155">VDR_local_ip</ID>
   <ID DESC="VDR本机端口" INIT="9078">VDR_local_port</ID>
   
   <ID DESC="运行控制指令" INIT="运行控制指令">cmd_name</ID>

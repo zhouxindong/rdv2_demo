@@ -44,6 +44,8 @@ namespace ssa
 		virtual void               EndSync() {};
 
 		virtual long long          GetTimeStamp() = 0;
+		virtual long long          GetFrameCount() = 0;
+		virtual unsigned int       GetSNCode() = 0;
 	};
 }
 

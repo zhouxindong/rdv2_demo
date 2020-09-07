@@ -6,8 +6,8 @@ namespace ssa
 	class xmProcessorDll : public xmIProcessor
 	{
 	public:
-		//	strPath是一个以“@”开头的动态链接库路径
-		xmProcessorDll(const xmString& strPath);
+		//	strPath是一个可以以“@”开头的动态链接库绝对路径
+		xmProcessorDll(const xmString& strPath, xmMrtc* pMrtc, const xmString& strDataName);
 		virtual ~xmProcessorDll();
 
 		virtual xmRet System2Model(const xmValue& systemValue, xmValue& modelValue);

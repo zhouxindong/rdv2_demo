@@ -5,22 +5,31 @@
 #include "../base/async.h"
 #include "../base/rwlock.h"
 #include "memorypage.h"
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 #include <shared_mutex>
+#endif
 
 namespace ssa
 {
 	class xmDataCenter
 	{
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 		mutable std::shared_mutex     m_Mutex;
 		mutable std::shared_mutex     m_LocalMutex;
+#else
+		mutable xmMutex     m_Mutex;
+		mutable xmMutex     m_LocalMutex;
+#endif
 
 		mutable xmObjsMgr   m_ObjsMgr;
 
 	public:
 		//检测离线状态,当值为0xFFFFFFFF时，表示不检测
-		int               m_nOfflineSycles = 100;
+		int               m_nOfflineSycles;// = 100;
 
 	public:
+		xmDataCenter();
+
 		bool              AddNode(const xmNode& pNode);
 		bool              RemoveNode(const std::string& strName);
 
@@ -47,13 +56,9 @@ namespace ssa
 
 		//按照数据集合名字复位所有参数的更新索引值，表明参数不是最新的。
 		void              ReferenceCount(const std::string& strName, bool bMirrorMemory) const;
-		//复位情况处理
-		void              DataReset2InitState(const std::string& strName, bool bMirrorMemory);
 
 		//按照数据集合名字复位所有参数的更新索引值，表明参数不是最新的。
 		void              ReferenceCountAll(bool bMirrorMemory) const;
-		//复位情况处理
-		void              DataReset2InitStateAll(bool bMirrorMemory);
 
 		//处理离线情况,默认1000个周期后，如果还没有收到激活的信号，认为处于离线状态
 		void              OfflineCheck();
@@ -77,11 +82,11 @@ namespace ssa
 		virtual int       IsRefreshed(const char* strName) const;
 		//通用值读写
 		int               GetValue(const char* strName, char* pBuf, unsigned int uLength);
-		int               SetValue(const char* strName, const char* pBuf, unsigned int uLength);
+		int               SetValue(const char* strName, const char* pBuf, unsigned int uLength, bool isWriteSign = true);
 
 		//带路径的值读写
 		int               GetValue(const char* strName, const char* strPath, char* pBuf, unsigned int uLength);
-		int               SetValue(const char* strName, const char* strPath, const char* pBuf, unsigned int uLength);
+		int               SetValue(const char* strName, const char* strPath, const char* pBuf, unsigned int uLength ,bool isWriteSign = true);
 
 		unsigned int      GetNodeCount() const;
 		unsigned int      GetLatestNodeSN() const;

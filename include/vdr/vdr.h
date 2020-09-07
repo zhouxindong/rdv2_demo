@@ -40,6 +40,14 @@ namespace ssa
 	xmRSP_BUILD_INDEX_FAILED,//10011  索引建立失败
 	}xmERspCodes;
 	*/
+
+	/**
+	*  WARNING：
+	*  在创建完成后,所有可能往外部发送数据，且需要等待回应消息的接口谨慎在消息回调进程中使用,因为消息队列的嵌套等待，可能会造成消息的拥塞。
+	*  如：AddNode，AddDataSet，AddData以及对应的删除等操作谨慎在与其对应的通过ConfigNodeEventHandler、ConfigDataSetEventHandler、ConfigDataEventHandler等配置的消息处理线程中调用。
+	*  如：SyncContent在方向指定为xmESyncDirection::xmESD_TOCLIENT时谨慎在与其对应的ConfigMSyncHandler、ConfigDPCHandler等配置的值更新回调消息处理线程中调用。
+	*/
+
 	class xmVDR_EXPORT xmVDR
 	{
 	private:
@@ -76,7 +84,6 @@ namespace ssa
 		* @return VDR属性指针。
 		*/
 		virtual xmVDRAttr*     GetVDRAttr(void);
-
 		/**
 		* 切换系统状态至新状态，模拟器中可以用于回放使用，此状态下，系统所有的数据集合均转换到新的存储区域。
 		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
@@ -92,14 +99,12 @@ namespace ssa
 		* @return 系统工作状态。
 		*/
 		virtual xmESystemState GetSystemState(void);
-
 		/**
 		* 配置Log消息处理器，接收所有的日志消息，用户可通过它自行决定如何显示日志。
 		* @param pHandler 消息处理器。
 		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
 		*/
 		virtual int            ConfigLogHandler(xmMsgHandler* pHandler);
-
 		/**
 		* 向VDR增加节点。
 		* @param nd 节点信息。
@@ -131,8 +136,6 @@ namespace ssa
 		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
 		*/
 		virtual int            GetNode(const char* strNodeName, xmNode& nd);
-
-
 		/**
 		* 向VDR增加数据集。
 		* @param nd 数据集信息。
@@ -172,7 +175,6 @@ namespace ssa
 		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
 		*/
 		virtual int            GetDataSet(const char* strDataSetName, xmDataSet& ds, std::vector<xmData>& vData);
-		
 		/**
 		* 按照数据集名字获取数据集对应的存储空间长度，用于大块读写内存需求时使用。
 		* @param strDataSetName 数据集名字。
@@ -197,7 +199,6 @@ namespace ssa
 		* @return 结果，-1表示失败，其他代码表示正确写内存的长度。
 		*/
 		virtual int            SetDataSetMemory(const char* strDataSetName, int nPos, char* pIn, int nSize);
-
 		/**
 		* 按照数据集名字，判断数据集当前是否处于活跃状态。
 		* @param strDataSetName 数据集名字。
@@ -209,13 +210,24 @@ namespace ssa
 		* @param nCircles 几个时钟周期没有收到新的消息，认为数据集处于离线状态,当值为0xFFFFFFFF时，表示不检测。
     	*/
 		virtual void           SetUnActivePeriod(int nCircles);
-
+		/**
+		* 设置默认的Qos方式,1表示允许丢包，2表示不允许丢包，目前VDR初始化时，将默认方式置为了2（所有数据不允许丢包）。
+		* @param nQos 数据传输质量。
+		*/
+		virtual void           SetDefaultQos(int nQos);
 		/**
 		* 向VDR增加数据。
-		* @param data 数据信息。
+		* @param data 数据信息，使用默认数据传输质量。
 		* @return 结果，xmERspCodes::xmRSP_ACK_OK(10001)表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
 		*/
 		virtual int            AddData(xmData& data);
+		/**
+		* 向VDR增加数据,增加了对数据传输质量的判断，目前包括了允许丢包和不允许丢包两个类别。
+		* @param data  数据信息。
+		* @param nQos  数据传输质量，目前包括了不能丢信息和可以丢信息两类，1表示允许丢包（数值类、状态类），2表示不允许丢包（指令类），当指定为0时使用默认的方式处理。
+		* @return 结果，xmERspCodes::xmRSP_ACK_OK(10001)表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
+		*/
+		virtual int            AddData(xmData& data, int nQos);
 		/**
 		* 删除VDR中数据。
 		* @param strDataName 数据名字。
@@ -262,11 +274,12 @@ namespace ssa
 		*/
 		virtual bool           UnLink(const char* strNodeName, const char* strDataSetName);
 		/**
-		* 重新分配数据结构，通常在加入数据后，更新服务器和本地的数据结构。
+		* 为了和以前的兼容，新增参数。重新分配数据结构，通常在加入数据后，更新服务器和本地的数据结构。
 		* @param strDataSetName 数据集名字。
+		* @param nEndPoint      表示某一端更新信息，0表示服务器和客户端两边都更新，1表示只有客户端更新，2表示只有服务器端更新。
 		* @return 结果，xmERspCodes::xmRSP_ACK_OK(10001)表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
 		*/
-		virtual int            Update(const char* strDataSetName);
+		virtual int            Update(const char* strDataSetName,int nEndPoint = 0);
 		/**
 		* 从服务器获取最新的VDR信息，更新VDR。
 		* @return 结果，xmERspCodes::xmRSP_ACK_OK(10001)表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
@@ -279,6 +292,13 @@ namespace ssa
 		*/
 		virtual int            FetchDSInfo(const char* strDataSetName);
 		/**
+		* 从服务器获取最新的数据集值，更新VDR中数据集值。
+		* @param strDataSetName 数据集名字。
+		* @return 结果，xmERspCodes::xmRSP_ACK_OK(10001)表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
+		*/
+		virtual int            FetchDSValue(const char* strDataSetName);
+
+		/**
 		* 判断数据是否有更新。
 		* @param strDataName 数据名字。
 		* @return 结果，0表示未更新，大于等于1表示更新，-1表示失败。
@@ -286,7 +306,8 @@ namespace ssa
 		virtual int            IsRefreshed(const char* strDataName);
 		/**
 		* 数据值同步，此处的同步是将所有已经存在的数据集进行同步，在回放状态时无效，慎用。
-		* @param am 向那个方向进行同步，方向具体参见xmESyncDirection说明。
+		* @param strDataSetName 同步的数据集名字。
+		* @param syncDir 向那个方向进行同步，方向具体参见xmESyncDirection说明。
 		typedef enum __tagSyncDirection
 		{
 			xmESD_UNKOWN = 0,	        /**< 表示无意义方向。
@@ -301,8 +322,9 @@ namespace ssa
 		* @param bUseRTE 是否使用RTE模式，RTE是指共享内存模式。
 		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
 		*/
-		virtual int            SyncContent(xmESyncDirection am, bool bUseRTE);
-		
+		virtual int            SyncContent(xmESyncDirection syncDir, bool bUseRTE);
+		virtual int            SyncContent(const char* strDataSetName, xmESyncDirection syncDir, bool bUseRTE);
+
 		/**
 		* 触发一次时钟信号，输入参数为时钟基数，同步周期，同步周期是时钟基数的倍数，表示几个时钟会进行一次值同步。
 		* @param nTickTime 时钟基数。
@@ -333,6 +355,12 @@ namespace ssa
 		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户判断是否正确。
 		*/
 		virtual int            ConfigSyncProxy(int nProxyID, const char* dllName = "");
+
+		/**
+		* 设置是否使用本地时钟进行仿真周期回调,系统默认使用本地时钟驱动。
+		* @param bIsUseLocalTimer 参数为true时，表示使用本地时钟驱动，false表示使用系统时钟。
+		*/
+		void                   UseLocalTickSignal(bool bIsUseLocalTimer = true);
 
 	private:
 		friend class           xmAccessPoint;

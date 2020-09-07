@@ -17,11 +17,12 @@ namespace ssa
 		StringCoding(void);
 		~StringCoding(void);
 
+#if(_MSC_VER >= 1900) //vs2015及以上版本
 		////////使用C++11的特性实现/////////////////////////////
 		static std::string UTF8ToGBK(const std::string & utf8);
 		static std::string GBKToUTF8(const std::string & gbk);
 		////////////////////////////////////////////////////////
-
+#endif
 		static std::string  UTF_8ToGB2312(const char *pText, int pLen); //utf_8转为gb2312
 		static std::string  GB2312ToUTF_8(const char *pText, int pLen); //gb2312 转utf_8
 		static std::string  UrlGB2312(const char * str);                                   //urlgb2312编码

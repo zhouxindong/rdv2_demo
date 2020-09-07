@@ -1,6 +1,7 @@
 #ifndef __SSA_UMSF_MGROUP_H
 #define __SSA_UMSF_MGROUP_H
 #include "mtrigger.h"
+#include "mdata.h"
 
 namespace tinyxml2
 {
@@ -9,9 +10,11 @@ namespace tinyxml2
 namespace ssa
 {
 	//	定义数据组描述
+	class xmUMSF;
 	class xmMdi;
 	class xmModelGroup
 	{
+		friend xmUMSF;
 		friend xmMdi;
 	public:
 		//	记录在xml文件中描述的Group是否激活
@@ -25,7 +28,7 @@ namespace ssa
 			GS_AUTOACTIVATED
 		}xmGroupState;
 
-		xmModelGroup(tinyxml2::XMLElement* xmlElement) : m_pTrigger(NULL), m_eActivation(GS_ACTIVATED), m_xmlElement(xmlElement) {};
+		xmModelGroup(tinyxml2::XMLElement* xmlElement) : m_pTrigger(NULL), m_eActivation(GS_ACTIVATED), m_xmlElement(xmlElement), m_eIOType(IOT_INNER) {};
 		virtual ~xmModelGroup() 
 		{
 			if (m_pTrigger != NULL)
@@ -37,13 +40,17 @@ namespace ssa
 		{
 			return m_strName;
 		}
+		xmEIOType IOType() const
+		{
+			return m_eIOType;
+		}
 		const char* Attribute(const char* strAttrName) const;
 
-		const xmString& Data(size_t i) const
+		const xmModelData* Data(size_t i) const
 		{
 			return m_DataList[i];
 		}
-		const std::vector<xmString>& DataList() const
+		const std::vector<const xmModelData*>& DataList() const
 		{
 			return m_DataList;
 		}
@@ -60,7 +67,8 @@ namespace ssa
 
 	protected:
 		xmString m_strName;
-		std::vector<xmString> m_DataList;
+		xmEIOType m_eIOType;
+		std::vector<const xmModelData*> m_DataList;
 		xmModelTrigger* m_pTrigger;
 		xmGroupState m_eActivation;
 

@@ -21,8 +21,8 @@ namespace ssa
 		virtual xmRet RegisterData(const xmString& strDataName, const xmValue& aValue, const xmString& strAttribute = NULL) = 0;
 		virtual xmRet RegisterSensDate(const xmString& strDataPath) = 0;
 
-		virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue) = 0;
-		virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue) = 0;
+		virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO) = 0;
+		virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO) = 0;
 		virtual xmString PrintData(const xmString& strDataName = NULL) = 0;
 
 	public:

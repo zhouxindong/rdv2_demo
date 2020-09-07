@@ -8,17 +8,22 @@
 #include "vdrattr.h"
 #include "proxyfactory.h"
 
-//#ifdef xmOS_WINDOWS
-//#pragma comment(lib, "wsock32")
-//#endif
-
 namespace ssa
 {
+	class xmMultiCastSocket : public xmUDPSocket
+	{
+	public:
+		int GetSocket()
+		{
+			return this->m_Socket;
+		}
+	};
+
 	class xmMulticastProxy : public xmICommProxy,public xmThread
 	{
 	public:
-		xmMulticastProxy(){};
-		virtual ~xmMulticastProxy(){};
+		xmMulticastProxy();
+		virtual ~xmMulticastProxy();
 
 		bool  Initialize(void*);
 		bool  Close();
@@ -32,16 +37,24 @@ namespace ssa
 
 	public:
 		//负责接收多播信息
-		xmUDPSocket*     m_pMultiUdpSocket;
+		xmMultiCastSocket*  m_pMultiUdpSocket;
 		//主要负责发送
-		xmUDPSocket*     m_pUdpSocket;
-		xmEvent          m_evtSign;
-		xmEvent          m_evtQiutSign;
+		xmMultiCastSocket*  m_pSendSocket;
+
+		SOCKET              m_socketSend;
+		SOCKADDR_IN         m_socketAddr;
+		xmEvent             m_evtSign;
+		xmEvent             m_evtQiutSign;
+		//如果为0,使用非阻塞模式,为1使用阻塞模式，目前默认使用1
+		int                 m_nMode;
 
 	private:
-		xmMCastVDRAttr   m_VDRAttr;
-		xmIPAddress      m_GroupAddr;
-		//xmService*       m_pService;
+		xmMCastVDRAttr      m_VDRAttr;
+		xmIPAddress         m_GroupAddr;
+
+		//用于记录每个发送数据集的发送帧数
+		unsigned int        m_nFrameCountSend;
+		std::unordered_map<unsigned int, unsigned int>  m_mapFrameCountRecv;
 	};
 }
 

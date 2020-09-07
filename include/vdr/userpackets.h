@@ -23,9 +23,9 @@ namespace ssa
 		//传输对象名字
 		std::string       m_strName;
 		//内存的版本号
-		unsigned char     m_nMemVersion = 0;
+		unsigned char     m_nMemVersion;
 		//索引的版本号
-		unsigned char     m_nIndexVersion = 0;
+		unsigned char     m_nIndexVersion;
 	};
 
 #pragma pack()
@@ -334,6 +334,45 @@ namespace ssa
 		unsigned char            m_nLast;
 	};
 
+	class xmDataValSyncPacket : public xmPacket
+	{
+	public:
+		xmDataValSyncPacket()
+		{
+			m_pktHead.m_uSessionID = xmESessionType::xmEST_VALSYNC;
+			m_pktHead.m_uPackCode = xmEPackCodes::xmPACK_DATAVALSYNC_ASK;
+			m_nMemLength = 0;
+		};
+		// copy constructor
+		xmDataValSyncPacket(const xmDataValSyncPacket &pkt) : xmPacket(pkt)
+		{
+			m_pktHead = pkt.m_pktHead;
+			m_nMemLength = pkt.m_nMemLength;
+			m_DataName = pkt.m_DataName;
+			m_uSyncDirection = pkt.m_uSyncDirection;
+			m_cFlag = pkt.m_cFlag;
+			m_nRefSign = pkt.m_nRefSign;
+		}
+
+		//往数据包写入数据
+		virtual void           WriteData(unsigned char* in, unsigned  int nSize) {};
+		//从将数据打包为网络数据报文
+		virtual unsigned int   Encode(unsigned char* out);
+		//从数据报文中解析数据
+		virtual void           Decode(unsigned char* in, unsigned int nSize);
+	public:
+		//同步的数据集名字
+		std::string              m_DataName;
+		//划分标志
+		char                     m_cFlag;
+		//同步方向，包括指向服务器、客户端或者是双向
+		unsigned char            m_uSyncDirection;
+		//本包的内存数据长度
+		unsigned int             m_nMemLength;
+		//用于数据敏感或者复位使用
+		unsigned char            m_nRefSign;
+	};
+
 	class xmTimeTickPacket : public xmPacket
 	{
 	public:
@@ -441,6 +480,7 @@ namespace ssa
 		virtual void           Decode(unsigned char* in, unsigned int nSize) {};
 
 		std::string            ToUtf8String();
+
 	public:
 		//最长的主题为16个汉字
 		std::string               m_strLog;

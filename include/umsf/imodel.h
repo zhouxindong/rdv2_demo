@@ -63,7 +63,21 @@ namespace ssa
 	@brief
 		xmIModelServer 定义了UMSF能够为模型提供的服务接口。
 	*******************************************************************************/
-#define xmIMODELSERVER_VERSION "V5.0.13_20200102"
+#define xmIMODELSERVER_VERSION "V5.0.17_20200311"
+	//	2020.03.11：
+	//		（1）增加了模型获取MRTC日志状态的服务接口。
+	//#define xmIMODELSERVER_VERSION "V5.0.16_20200309"
+	//	2020.03.09：
+	//		（1）增加了模型获取数据、组Log状态的服务接口。
+	//#define xmIMODELSERVER_VERSION "V5.0.15_20200302"
+	//	2020.03.02：
+	//		（1）合并了ApplyDataInput、ApplyDataOutput、ManualDataInput、ManualDataOutput为
+	//		ApplyDataIO、ManualDataIO服务函数；
+	//		（2）ManualGroupIO、ManualDataIO增加了是否立即与仿真系统同步的参数。
+	//#define xmIMODELSERVER_VERSION "V5.0.14_20200225"
+	//	2020.02.25：ApplyGroupIO、ManualGroupIO服务函数，增加了是否强制IO的参数，以选择IO
+	//		是否受组Enable状态的影响。
+	//#define xmIMODELSERVER_VERSION "V5.0.13_20200102"
 	//#define xmIMODELSERVER_VERSION "V5.0.12_20191217"
 	//#define xmIMODELSERVER_VERSION "V5.0.11_20191023"
 	//#define xmIMODELSERVER_VERSION "V5.0.10_20191022"
@@ -109,7 +123,7 @@ namespace ssa
 		//	获取模型、实例名称
 		virtual const xmString& ModelName() const = 0;
 		virtual const xmString& InstanceName(void) const = 0;
-
+		virtual bool IsCallbackLogged(xmEModelInterface eMi) const = 0;
 
 		/*******************************************************************************
 		数据服务
@@ -134,7 +148,7 @@ namespace ssa
 		virtual size_t TagData(const xmString& strTagName, xmPtr<const char*[]>& vDataName) const = 0;
 		virtual size_t DataTag(const xmString& strDataName, xmPtr<const char*[]>& vTagName) const = 0;
 		virtual bool IsDataTagged(const xmString& strDataName, const xmString& strTagName) const = 0;
-
+		virtual bool IsDataLogged(const xmString& strDataName) = 0;
 
 		//	数据数值
 		//	供模型使用的数据访问接口，strDataPath参数，为数据的模型名称，也可以用符号“.”直接访问
@@ -196,23 +210,26 @@ namespace ssa
 		virtual bool  GetGroupEnabled(const xmString& strGroupName) = 0;
 		virtual xmRet SetGroupEnabled(size_t uPos, bool bIsEnable) = 0;
 		virtual xmRet SetGroupEnabled(const xmString& strGroupName, bool bIsEnable) = 0;
-
+		//	查看组IO的日志状态
+		virtual bool IsGroupLogged(const xmString& strGroupName) = 0;
 
 		/*******************************************************************************
 		输入/输出控制服务
 		*******************************************************************************/
-		//	模型申请进行IO，不受任何限制，即无论指定组是否为活跃状态。IO为异步执行
 		//	申请IO时，只能指定数据组或者数据，不能指定到数据属性
-		virtual xmRet ApplyGroupIO(const xmString& strGroupName) = 0;
-		virtual xmRet ApplyDataInput(const xmString& strDataName) = 0;
-		virtual xmRet ApplyDataOutput(const xmString& strDataName) = 0;
+		//	bCompulsive为false，表示该申请受组Enable属性的控制，Enable为false时，不响应申请
+		//	为true时，忽略Enable状态
+		//	申请成功，返回xmE_SUCCESS，否则返回错误码
+		virtual xmRet ApplyGroupIO(const xmString& strGroupName, bool bCompulsive = false) = 0;
+		virtual xmRet ApplyDataIO(const xmString& strDataName) = 0;
 
-		//	模型手动进行IO，没有进行数据锁保护，不受任何限制，即无论指定组是否为活跃状态。IO为同步执行
+		//	模型手动进行IO，IO为同步执行
 		//	手动IO时，只能指定数据组或者数据，不能指定到数据属性
-		virtual xmRet ManualGroupIO(const xmString& strGroupName, bool bLockData = false) = 0;
-		virtual xmRet ManualDataInput(const xmString& strDataName, bool bLockData = false) = 0;
-		virtual xmRet ManualDataOutput(const xmString& strDataName, bool bLockData = false) = 0;
-
+		//	ManualGroupIO返回组数据IO失败的个数，全部成功返回0
+		//	bSyncNow参数为true，表示手动IO后，立即将本地数据同步到整个仿真系统
+		virtual int   ManualGroupIO(const xmString& strGroupName, bool bLockData = false, bool bCompulsive = false, bool bSyncNow = false) = 0;
+		virtual xmRet ManualDataIO(const xmString& strDataName, bool bLockData = false, bool bSyncNow = false) = 0;
+		
 	public:
 		//	xmIModelServer接口版本
 		//	用户不需要修改，仅用于UMSF对接口版本的比对
@@ -222,7 +239,10 @@ namespace ssa
 		xmIModelServer() {};
 	};
 
-#define xmIMODEL_VERSION "V5.0.01_20191023"
+#define xmIMODEL_VERSION "V5.0.02_20200305"
+	//	2020.03.05：OnFinishGroupInput、OnFinishGroupOutput、OnApplyGroupIO、OnApplyDataIO其输入参数，
+	//		均由bool改为int，表示IO失败的数据个数
+//#define xmIMODEL_VERSION "V5.0.01_20191023"
 //#define xmIMODEL_VERSION "V5.0.00_20190412"
 	class xmIModel : public xmUncopyable
 	{
@@ -252,11 +272,11 @@ namespace ssa
 
 		//	模型缓存与仿真系统进行数据交换的回调函数
 		virtual void OnPrepareGroupInput(const char* strGroupName) {};
-		virtual void OnFinishGroupInput(const char* strGroupName, bool isDone) {};
+		virtual void OnFinishGroupInput(const char* strGroupName, int nErrorCount) {};
 		virtual void OnPrepareGroupOutput(const char* strGroupName) {};
-		virtual void OnFinishGroupOutput(const char* strGroupName, bool isDone) {};
-		virtual void OnApplyGroupIO(const char* strGroupName, bool isDone) {};
-		virtual void OnApplyDataIO(const char* strDataName, bool isDone) {};
+		virtual void OnFinishGroupOutput(const char* strGroupName, int nErrorCount) {};
+		virtual void OnApplyGroupIO(const char* strGroupName, int nErrorCount) {};
+		virtual void OnApplyDataIO(const char* strDataName, xmRet nErrorCode) {};
 
 		//  状态信息
 		virtual xmString GetVersion(void) { return NULL; };

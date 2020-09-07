@@ -13,8 +13,8 @@ namespace ssa
 	{
 	public:
 		static unsigned int GetRandSN(unsigned int nCode = 0);
-		static unsigned int GetUniversalSN();
 		static std::vector<std::string> Split2(std::string str ,const char* flag);
+		static long long GetSysTimeMicros();
 	};
 }
 

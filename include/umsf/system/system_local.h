@@ -16,8 +16,8 @@ public:
 	};
 	virtual xmRet Login(const xmString& strNodeID, const xmString& strAttribute = NULL);
 	virtual xmRet Logout();
-	virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue);
-	virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue);
+	virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO);
+	virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO);
 };
 #endif  //  __UMSF_SYSTEM_LOCAL_H
 

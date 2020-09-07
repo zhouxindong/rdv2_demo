@@ -2,10 +2,12 @@
 #define __SSA_UMSF_MRTC_H
 #include "publicres.h"
 #include "mdi.h"
+#include "mui.h"
 #include "rtdata.h"
 #include "rtgroup.h"
 #include "mloader.h"
 #include "mserver.h"
+#include "mscheduler.h"
 #include "udefine.h"
 
 namespace ssa
@@ -64,21 +66,40 @@ namespace ssa
     说  明：MRTC定义模型在仿真过程中可以使用的资源。
 		    每一个模型均包含一个MRTC，模型所有的交互，均通过MRTC。
     *******************************************************************************/
-    class xmMrtc : public xmMsgHandler
+	class xmUMSF;
+	class xmManager;
+	class xmMrm;
+	class xmModelScheduler;
+	class xmModelAssistScript;
+	class xmMrtc : public xmMsgHandler
     {
-		friend xmTriggerScript;
+		friend xmUMSF;
+		friend xmManager;
+		friend xmMrm;
 		friend xmModelServer;
+		friend xmModelScheduler;
+		friend xmModelAssistScript;
 	public:
 		//	strInstanceName参数，为NULL时，表示该模型仅有一个实例，实例名称存储在MRM中
 		//	如果非NULL，则模型有多个实例，这个实例的名称是strInstanceName，所有他输出的参数都是
 		//	被封装在该名称的数据类内
 		//	bCombined参数表示是否该模型的所有实例都被封装在一个数据类以内。
-		xmMrtc(xmPublicResource* pPubRes, const char* strModelName, xmMdi* pMdi, const char* strInstanceName);
+		xmMrtc(xmPublicResource* pPubRes, const xmMdi* pMdi, const xmMui* pMui, const char* strInstanceCalculationFile);
 		~xmMrtc(void);
 
 		//	（一）根据MDI创建基本模型运行环境
 		void Create();
 		void Destroy();
+		//	模型调度器
+		inline xmModelScheduler* ModelSchedule()
+		{
+			return m_pModelSchedule;
+		}
+		//	模型数据服务
+		inline xmIModelServer* ModelServer()
+		{
+			return m_pModelServer;
+		}
 
 		//	（二）根据model.config文件中的配置信息，创建模型最终运行环境
 		//	（1）数据匹配信息
@@ -86,7 +107,9 @@ namespace ssa
 		//	输入数据的matchName可以是数据路径
 		//	输出数据的matchName只能是数据
 		//	内部数据只能匹配pInitValue
-		void SetDataMatch(xmRuntimeData* pData, const xmRuntimeData::SMatchInfo& matchInfo);
+		void DataMatch();
+		void DataMatch(xmRuntimeData* pData, const xmRuntimeData::SMatchInfo& matchInfo);
+
 		//	（2）设置输出数据的组合路径
 		//	pData：由于目前只支持实例级别的数据路径设置，因此应设置为NULL。
 		void SetDataPath(xmRuntimeData* pData, const char* strDataPath);
@@ -101,55 +124,59 @@ namespace ssa
 		size_t RegisterTrigger();
 
 		//	创建并设置使用该MRTC的模型实例
-		void CreateInstance(const xmString& strModelFile, const xmString& strModelData);
+		//	bIsReadyToGo参数表示当实例创建后，是否开始接收消息，除了UMSF初始加载过程中需要设置为false，
+		//	其他运行过程中的所有创建实例过程，都应该创建实例后立即开始接收消息。
+		void CreateInstance(bool bIsReadyToGo = true);
+		void DestroyInstance();
+		void RecreateInstance();
+		void ReadyToGo();
+		bool IsActive() const;
+		bool IsAutoRun() const
+		{
+			return m_pMui->IsAutoRun();
+		}
+		//	测试当模型实例是否启动，如果启动，则向调度模块发送指定消息
+		bool TestActiveAndPostMessage(const xmMessage& aMessage);
 
 		//	获取模型名称
 		inline const xmString& ModelName() const
 		{
-			return m_strModelName;
+			return m_pMui->ModelName();
 		}
 
 		//	获取模型实例名称
 		inline const xmString& InstanceName() const
 		{
-			return m_strInstanceName;
+			return m_pMui->InstanceName();
+		}
+
+		inline const xmString& Flag() const
+		{
+			return m_strFlag;
+		}
+
+		inline xmEDataMatchTarget DefaultDataMatchTarget() const
+		{
+			return m_pMui->DefaultDataMatchTarget();
+		}
+		inline const xmString& DefaultDataSet() const
+		{
+			return m_pMui->DefaultDataSet();
 		}
 
 		//	获取模型中数据信息
 		size_t GetDataCount() const;
-		size_t GetDataCount(xmEIOType ioType) const;
 		xmRuntimeData* GetData(const xmString& strDataName);
+		size_t GetDataCount(xmEIOType ioType) const;
 		xmRuntimeData* GetData(xmEIOType ioType, size_t uIndex);
 		xmRuntimeData* GetData(xmEIOType ioType, const xmString& strDataName);
-		//	获取数据数值，下列两个函数调用时，会使用MRTC对原数据进行保护
-		xmRet GetDataValue(xmRuntimeData* pData, xmValue& cacheValue);
-		xmRet GetDataSystemValue(xmRuntimeData* pData, xmValue& systemValue);
 
-		//	获取模型组信息
 		size_t GetGroupCount() const;
-		const xmRuntimeGroup* GetGroup(const xmString& strDataName) const;
-		const xmRuntimeGroup* GetGroup(size_t uIndex) const;
-		xmRuntimeGroup* GetGroup(const xmString& strDataName)
-		{
-			return const_cast<xmRuntimeGroup*>(static_cast<const xmMrtc&>(*this).GetGroup(strDataName));
-		}
-		xmRuntimeGroup* GetGroup(size_t uIndex)
-		{
-			return const_cast<xmRuntimeGroup*>(static_cast<const xmMrtc&>(*this).GetGroup(uIndex));
-		}
+		xmRuntimeGroup* GetGroup(size_t uIndex);
+		xmRuntimeGroup* GetGroup(const xmString& strGroupName);
+
 		//	复位模型实例组的激活状态，仅对ACTIVATE属性配置为auto的组有效。
 		void ResetGroupEnable(bool bIsEnabled);
-
-		//	打印数据信息
-		xmString PrintData(const xmRuntimeData* pData = NULL) const;
-		xmString PrintGroup(const xmRuntimeGroup* pGroup = NULL) const;
-
-
-		//	模型数据服务
-		xmIModelServer& ModelServer()
-		{
-			return *m_pModelServer;
-		}
 
 		//	运行环境自检
 		xmRet Inspect(xmString& strError);
@@ -180,10 +207,35 @@ namespace ssa
 			}
 			return xmE_SUCCESS;
 		}
+		bool IsExecuteTimeStatistics(xmEInstanceFunction eFunc)
+		{
+			return (eFunc == IF_ALL || eFunc == IF_ERROR) ? false : m_bExecuteTime[eFunc];
+		}
 		double ExecuteTime(xmEInstanceFunction eFunc)
 		{
 			return (eFunc == IF_ALL || eFunc == IF_ERROR) ? 0.0 : m_fExecuteTime[eFunc];
 		}
+
+		//	日志接口
+		void LogControl(xmEModelInterface eMi, bool bOpen)
+		{
+			if (bOpen)
+			{
+				m_uLog |= eMi;
+			}
+			else
+			{
+				m_uLog &= (~eMi);
+			}
+		}
+		bool IsLogged(xmEModelInterface eMi) const
+		{
+			return (m_uLog & eMi) == eMi;
+		}
+
+	protected:
+		unsigned int m_uLog;
+
 	private:
 		/*******************************************************************************
 		接收来至 Trigger 和 Manager 的消息
@@ -215,17 +267,19 @@ namespace ssa
 		//	共用资源
 		xmPublicResource* const m_pPublicRes;
 		//	为模型提供的服务接口
-		xmModelServer* m_pModelServer;
+		xmPtr<xmModelServer> m_pModelServer;
+		//	调度接口
+		xmPtr<xmModelScheduler> m_pModelSchedule;
 
-		//	模型名称
-		const xmString m_strModelName;
 		//	模型配置信息
-		xmMdi* const m_pMdi;
+		const xmMdi* const m_pMdi;
+		//	模型使用信息
+		xmPtr<const xmMui> m_pMui;
 		//	模型运行实例加载器
 		xmIModelLoader* m_pModelLoader;
+		//	实例计算文件名称
+		const xmString m_strInstanceCalculationFile;
 
-		//	实例名称
-		const xmString m_strInstanceName;
 		//	当前网络节拍数，非实时，仅驱动后更新
 		unsigned int m_uClickCount;
 		//	模型驱动的节拍数
@@ -234,6 +288,11 @@ namespace ssa
 		xmATime m_tWallTime;
 		//	当前仿真时间
 		xmATime m_tSimuTime;
+		//	创建、删除实例时的保护
+		mutable xmMutex m_IntanceMutex;
+
+		//	实例标记，可以用于日志的标题
+		const xmString m_strFlag;
 
 		//	分内部、输入、输出三类记录模型数据
 		//	下列三个表中的key都是指模型使用的数据名称
@@ -258,11 +317,15 @@ namespace ssa
 		mutable xmRWLock m_InputCacheLock;
 		mutable xmRWLock m_OutputCacheLock;
 
+		void _CreateInstance(bool bIsReadyToGo);
+		void _DestroyInstance();
+
 		size_t _InitData(const xmMdi::t_DataPtrMap& vInitData, t_RtDataMap& mapData, xmBuffer& cache, xmEIOType iot);
 		void _InitGroup(const xmModelGroup* pModelGroup, t_RtDataMap& mapData, xmRuntimeGroup* pGroup);
 
-		xmRet _GroupIO(xmRuntimeGroup* pGroup, bool bLockData = true);
+		int _GroupIO(xmRuntimeGroup* pGroup, bool bLockData = true);
 		xmRet _DataIO(xmRuntimeData* pData, bool bLockData = true);
+		xmRet _PreIO(xmRuntimeData* pData, xmValue& aValue, bool bLockData = true);
 
 		//	根据组的模型名称，获取该组的运行时对象
 		static xmRuntimeGroup* _FindGroup(t_RtGroupMap& mapGroup, const xmString& strGroupName);
@@ -270,286 +333,36 @@ namespace ssa
 		static xmValue _FindValue(const t_RtDataMap& mapData, const xmString& strDataPath);
 		xmValue _FindValue(const xmString& strDataPath, xmEIOType& ioType) const;
 
+
 		//	记录MRTC调用模型实例接口函数错误
-		void __log_error_iModel(const xmString& strFunction, int nErrorID, const char* strErrorMsg)
-		{
-			xmString strTitle = xmStringUtil::Format("%s::%s", m_strModelName.String(),	m_strInstanceName.String());
-			xmLog::error(strTitle, "Call model interface %s failed(%d): %s",
-				strFunction.String(),
-				nErrorID,
-				strErrorMsg);
-		}
-		//	记录模型数据组IO错误
-		void __log_error_GroupIO(xmRuntimeGroup* pGroup, int nErrorID, const char* strErrorMsg)
-		{
-			xmString strTitle = xmStringUtil::Format("%s::%s", m_strModelName.String(), m_strInstanceName.String());
-			xmLog::error(strTitle, "Group %s %s failed(%d): %s",
-				pGroup->ModelGroup().Name().String(),
-				pGroup->IOType() == IOT_INPUT ? "input" : "output",
-				nErrorID,
-				strErrorMsg);
-		}
-		//	记录模型数据IO错误
-		void __log_error_DataIO(xmRuntimeData* pData, int nErrorID, const char* strErrorMsg)
-		{
-			xmString strTitle = xmStringUtil::Format("%s::%s", m_strModelName.String(), m_strInstanceName.String());
-			xmLog::error(strTitle, "Data %s/%s %s failed(%d): %s",
-				pData->DataName().String(),
-				pData->SystemPath().String(),
-				pData->IOType() == IOT_INPUT ? "input" : "output",
-				nErrorID,
-				strErrorMsg);
-		}
+		//	下面两个函数，之所以定义为宏，而不是函数，是为了避免在判断结果产生前，进行无用的字符串构造。
+		//void __log_error_iModel(const char* strFunction, int nErrorID, const char* strErrorMsg)
+#define __log_error_iModel(strFunction, nErrorID, strErrorMsg)	\
+		do{														\
+			if (nErrorID != xmE_SUCCESS)						\
+				xmLog::error(m_strFlag, "Call model interface %s failed(%d): %s", strFunction, nErrorID, strErrorMsg);\
+		} while (false)
+		//	记录回调日志
+		//void __log_iModel(xmEModelInterface eMi, const char* strFunction)
+#define __log_iModel(eMi, strFunction)	\
+		do{								\
+			if (IsLogged(eMi))			\
+				xmLog::info(m_strFlag, "Call model interface: %s", strFunction);	\
+		} while (false)
+
+
 		//	记录MRTC消息响应函数执行耗时
 		void __log_ETS(const xmString& strFunction)
 		{
-			xmString strTitle = xmStringUtil::Format("%s::%s", m_strModelName.String(), m_strInstanceName.String());
-			xmLog::info(strTitle, "%s execute time %.3fms.",
+			xmLog::info(m_strFlag, "%s execute time %.3fms.",
 				strFunction.String(),
 				xmRUN_TIME(MRTC_ETS));
 		}
 		static void __log_WLS(double fWLPrecent, void* pParam)
 		{
 			xmMrtc* pMrtc = (xmMrtc*)pParam;
-			xmString strTitle = xmStringUtil::Format("%s::%s", pMrtc->m_strModelName.String(), pMrtc->m_strInstanceName.String());
-			xmLog::info(strTitle, "Work load %.2f%% pre second.", pMrtc->WorkLoad());
+			xmLog::info(pMrtc->m_strFlag, "Work load %.2f%% pre second.", pMrtc->WorkLoad());
 		}
-
-
-
-	private:
-		/*******************************************************************************
-		供模型使用的接口，由xmModelServer调用
-		*******************************************************************************/
-		//	记录系统日志
-		inline void iServer_Log(xmLog::ELogLevel eLevel, const char* strContent)
-		{
-			xmString strTitle = xmStringUtil::Format("%s::%s", m_strModelName.String(), m_strInstanceName.String());
-			xmLog::log(eLevel, strTitle, strContent);
-		}
-
-		//	获取仿真状态，开始，结束，冻结，解冻、快飞、回放
-		inline unsigned int iServer_GetSimulateState(void) const
-		{
-			return m_pPublicRes->System()->GetSimulateState();
-		};
-		//	获取当前仿真倍速
-		inline int iServer_GetSimulateSpeed(void) const
-		{
-			return m_pPublicRes->System()->GetSimulateSpeed();
-		};
-		//	获取当前由服务器统一的系统时间，单位：取决于系统
-		inline time_t iServer_GetSystemTime(void) const
-		{
-			return m_pPublicRes->System()->GetSystemTime();
-		};
-		//	获取当前网络节拍数，单位：节拍个数
-		inline size_t iServer_GetClickCount(void) const
-		{
-			return m_pPublicRes->System()->GetClickCount();
-		};
-		//	获取每个网络节拍的时间，由仿真系统决定，单位：毫秒
-		inline unsigned int iServer_GetClickCycle(void) const
-		{
-			return m_pPublicRes->System()->GetClickCycle();
-		};
-		//	获取模型配置的驱动周期，此时间，不一定是模型实际驱动时间。单位：毫秒
-		inline unsigned int iServer_GetDriveTime(void) const
-		{
-			return m_pMdi->DriveTime();
-		};
-		//	获取每个驱动周期的实际节拍数，单位：节拍数
-		//	GetClickCycle() × GetDriveClick() = 实际驱动时间
-		inline unsigned int iServer_GetDriveClick(void) const
-		{
-			return m_uDriveClick;
-		};
-		//	获取世界墙时
-		inline const xmATime& iServer_GetWallTime(void) const
-		{
-			return m_tWallTime;
-		};
-		//	获取仿真时间
-		inline const xmATime& iServer_GetSimuTime(void) const
-		{
-			return m_tSimuTime;
-		};
-
-		//	数据按照输入输出类型遍历，参数uPos表示第几个数据
-		size_t iServer_InnerDataCount(void) const
-		{
-			return m_mapInnerData.Size();
-		};
-		const xmString& iServer_InnerDataName(size_t uPos) const
-		{
-			return m_mapInnerData.IndexKey(uPos);
-		};
-		const char* iServer_InnerDataAttr(size_t uPos, const char* strAttrName) const
-		{
-			return m_mapInnerData.IndexValue(uPos)->DataAttr(strAttrName);
-		}
-		const char* iServer_InnerDataAttr(const xmString& strDataName, const char* strAttrName) const
-		{
-			t_RtDataMap::t_cPos pos = m_mapInnerData.Find(strDataName);
-			return (pos == m_mapInnerData.INVALID_POS()) ? NULL : m_mapInnerData.PosValue(pos)->DataAttr(strAttrName);
-		}
-
-		size_t iServer_InputDataCount(void) const
-		{
-			return m_mapInputData.Size();
-		};
-		const xmString& iServer_InputDataName(size_t uPos) const
-		{
-			return m_mapInputData.IndexKey(uPos);
-		};
-		const char* iServer_InputDataAttr(size_t uPos, const char* strAttrName) const
-		{
-			return m_mapInputData.IndexValue(uPos)->DataAttr(strAttrName);
-		}
-		const char* iServer_InputDataAttr(const xmString& strDataName, const char* strAttrName) const
-		{
-			t_RtDataMap::t_cPos pos = m_mapInputData.Find(strDataName);
-			return (pos == m_mapInputData.INVALID_POS()) ? NULL : m_mapInnerData.PosValue(pos)->DataAttr(strAttrName);
-		}
-
-		size_t iServer_OutputDataCount(void) const
-		{
-			return m_mapOutputData.Size();
-		};
-		const xmString& iServer_OutputDataName(size_t uPos) const
-		{
-			return m_mapOutputData.IndexKey(uPos);
-		};
-		const char* iServer_OutputDataAttr(size_t uPos, const char* strAttrName) const
-		{
-			return m_mapOutputData.IndexValue(uPos)->DataAttr(strAttrName);
-		}
-		const char* iServer_OutputDataAttr(const xmString& strDataName, const char* strAttrName) const
-		{
-			t_RtDataMap::t_cPos pos = m_mapOutputData.Find(strDataName);
-			return (pos == m_mapOutputData.INVALID_POS()) ? NULL : m_mapOutputData.PosValue(pos)->DataAttr(strAttrName);
-		}
-
-		//	数据按照标签遍历
-		//	获取模型中所有Tag的名称，返回Tag数量
-		size_t iServer_TagName(xmPtr<const char*[]>& vTagName) const;
-		//	获取某一个Tag下的所有数据名称，返回数据数量
-		size_t iServer_TagData(const xmString& strTagName, xmPtr<const char*[]>& vDataName) const;
-		//	获取某一个数据下的所有标签名称，返回标签数量
-		size_t iServer_DataTag(const xmString& strDataName, xmPtr<const char*[]>& vTagName) const;
-		//	判断一个数据是否打上某个标签，如果strTagName为空，则判断这个数据是否打上标签
-		bool iServer_IsDataTagged(const xmString& strDataName, const xmString& strTagName) const;
-
-
-		//	供模型使用的数据访问接口，strDataPath参数，为数据的模型名称，也可以用符号“.”直接访问
-		//	结构化数据中的属性，如:"天宫状态.位置信息.X轴"
-		//	对于输入数据，如果模型改变其数值，当进行Input更新时，会被系统数据改变
-		//	参数uPos表示第几个数据
-		inline xmValue iServer_InnerData(const xmString& strDataPath) const
-		{
-			return _FindValue(m_mapInnerData, strDataPath);
-		}
-		inline xmValue iServer_InnerData(size_t uPos) const
-		{
-			return m_mapInnerData.IndexValue(uPos)->DataValue().PropertyValue();
-		}
-		inline xmValue iServer_InputData(const xmString& strDataPath) const
-		{
-			return _FindValue(m_mapInputData, strDataPath);
-		}
-		inline xmValue iServer_InputData(size_t uPos) const
-		{
-			return m_mapInputData.IndexValue(uPos)->DataValue().PropertyValue();
-		}
-		inline xmValue iServer_OutputData(const xmString& strDataPath) const
-		{
-			return _FindValue(m_mapOutputData, strDataPath);
-		}
-		inline xmValue iServer_OutputData(size_t uPos) const
-		{
-			return m_mapOutputData.IndexValue(uPos)->DataValue().PropertyValue();
-		}
-		//	供模型使用的数据访问接口，不区分内部、输入、输出数据，参数同上
-		inline xmValue iServer_ModelData(const xmString& strDataPath, xmEIOType& ioType) const
-		{
-			return _FindValue(strDataPath, ioType);
-		}
-		inline xmValue iServer_ModelData(const xmString& strDataPath) const
-		{
-			xmEIOType ioType;
-			return iServer_ModelData(strDataPath, ioType);
-		}
-
-		//	组遍历
-		//	参数uPos表示第几个组，参数uIndex表示组中第几个数据
-		size_t iServer_GroupCount(void) const
-		{
-			return m_mapGroup.Size();
-		};
-		const xmString& iServer_GroupName(size_t uPos) const
-		{
-			return m_mapGroup.IndexKey(uPos);
-		};
-		xmEIOType iServer_GroupType(size_t uPos) const
-		{
-			return m_mapGroup.IndexValue(uPos)->IOType();
-		};
-		xmEIOType iServer_GroupType(const xmString& strGroupName) const
-		{
-			t_RtGroupMap::t_cPos pos = m_mapGroup.Find(strGroupName);
-			return (pos == m_mapGroup.INVALID_POS()) ? IOT_INNER : m_mapGroup.PosValue(pos)->IOType();
-		};
-		const char* iServer_GroupAttr(size_t uPos, const char* strAttrName) const
-		{
-			return m_mapGroup.IndexValue(uPos)->Attribute(strAttrName);
-		}
-		const char* iServer_GroupAttr(const xmString& strGroupName, const char* strAttrName) const
-		{
-			t_RtGroupMap::t_cPos pos = m_mapGroup.Find(strGroupName);
-			return (pos == m_mapGroup.INVALID_POS()) ? NULL : m_mapGroup.PosValue(pos)->Attribute(strAttrName);
-		}
-		size_t iServer_GroupData(size_t uPos, xmPtr<const char*[]>& vDataName) const;
-		size_t iServer_GroupData(const xmString& strGroupName, xmPtr<const char*[]>& vDataName) const;
-		//	获取和设置数据组的状态
-		bool  iServer_GetGroupEnabled(size_t uPos) const
-		{
-			return m_mapGroup.IndexValue(uPos)->IsEnabled();
-		}
-		bool  iServer_GetGroupEnabled(const xmString& strGroupName) const
-		{
-			t_RtGroupMap::t_cPos pos = m_mapGroup.Find(strGroupName);
-			if (pos == m_mapGroup.INVALID_POS())
-			{
-				throw xmExIllegalInput();
-			}
-			return m_mapGroup.PosValue(pos)->IsEnabled();
-		}
-		xmRet iServer_SetGroupEnabled(size_t uPos, bool bIsEnabled)
-		{
-			m_mapGroup.IndexValue(uPos)->SetEnabled(bIsEnabled);
-			return xmE_SUCCESS;
-		}
-		xmRet iServer_SetGroupEnabled(const xmString& strGroupName, bool bIsEnabled)
-		{
-			xmRuntimeGroup* pGroup = _FindGroup(m_mapGroup, strGroupName);
-			if (pGroup == NULL)
-			{
-				return xmE_FAIL;
-			}
-			pGroup->SetEnabled(bIsEnabled);
-			return xmE_SUCCESS;
-		}
-
-		//	模型申请进行IO，不受任何限制。IO为异步执行
-		//	申请IO时，只能指定数据组或者数据，不能指定到数据属性
-		xmRet iServer_ApplyGroupIO(const xmString& strGroupName);
-		xmRet iServer_ApplyDataInput(const xmString& strDataName);
-		xmRet iServer_ApplyDataOutput(const xmString& strDataName);
-		//	模型手动进行IO，不受任何限制。IO为同步执行
-		//	手动IO时，只能指定数据组或者数据，不能指定到数据属性
-		xmRet iServer_ManualGroupIO(const xmString& strGroupName, bool bLockData = false);
-		xmRet iServer_ManualDataInput(const xmString& strDataName, bool bLockData = false);
-		xmRet iServer_ManualDataOutput(const xmString& strDataName, bool bLockData = false);
 
 	private:
 		//	调用模型的回调函数，要进行缓存保护和异常捕获
@@ -568,11 +381,11 @@ namespace ssa
 		void  iModel_OnSpeed(int nSpeed);
 		void  iModel_OnCommand(const xmString& cmdName, const xmValue& cmdParam);
 		void  iModel_OnPrepareGroupInput(const char* strGroupName);
-		void  iModel_OnFinishGroupInput(const char* strGroupName, bool isDone);
+		void  iModel_OnFinishGroupInput(const char* strGroupName, int nErrorCount);
 		void  iModel_OnPrepareGroupOutput(const char* strGroupName);
-		void  iModel_OnFinishGroupOutput(const char* strGroupName, bool isDone);
-		void  iModel_OnApplyGroupIO(const char* strGroupName, bool isDone);
-		void  iModel_OnApplyDataIO(const char* strDataName, bool isDone);
+		void  iModel_OnFinishGroupOutput(const char* strGroupName, int nErrorCount);
+		void  iModel_OnApplyGroupIO(const char* strGroupName, int nErrorCount);
+		void  iModel_OnApplyDataIO(const char* strDataName, xmRet nErrorCode);
 	};
 }   //  namespace ssa
 #endif  //  __SSA_UMSF_MRTC_H

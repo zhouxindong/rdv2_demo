@@ -10,7 +10,7 @@ namespace ssa
 	{
 	public:
 		//	strScript如果以“@”开头，则表示一个脚本文件路径，否则表示脚本内容
-		xmLuaEngine(const char* strScript);
+		xmLuaEngine(const char* strScript, const char* strScriptAbsPath);
 		virtual ~xmLuaEngine();
 		virtual EEngineType Type() const
 		{
@@ -34,12 +34,12 @@ namespace ssa
 			return read_pointer(L, key);
 		}
 		//	将xmValue压入栈
-		int push_value(const xmValue& aValue)
+		xmRet push_value(const xmValue& aValue)
 		{
 			return push_value(L, aValue);
 		}
 		//	将栈顶的元素赋值给指定类型的xmValue，如果成功，则弹出该元素
-		int pop_value(xmValue& aValue)
+		xmRet pop_value(xmValue& aValue)
 		{
 			return pop_value(L, aValue);
 		}
@@ -56,13 +56,38 @@ namespace ssa
 		int call_function(int nParamCnt, int nReturnCnt);
 
 	protected:
+		lua_State* const L;
+
 		static int write_pointer(lua_State* ls, const char* key, void* value);
 		static void* read_pointer(lua_State* ls, const char* key);
-		static int push_value(lua_State* ls, const xmValue& aValue);
-		static int pop_value(lua_State* ls, xmValue& aValue);
+		static xmRet push_value(lua_State* ls, const xmValue& aValue);
+		//	将栈顶元素弹出，赋值给aValue。无论是否赋值成功，栈顶元素均会被弹出。
+		static xmRet pop_value(lua_State* ls, xmValue& aValue);
 		static int push_vstring(lua_State* ls, const xmPtr<const char *[]>& vString, size_t uCount);
+		static void set_return(lua_State *L, const xmValue& aValue)
+		{
+			push_value(L, aValue);
+		}
+		static void set_return(lua_State *L, const xmPtr<const char *[]>& vString, size_t uCount)
+		{
+			push_vstring(L, vString, uCount);
+		}
 
-		lua_State* const L;
+		//	所有LUA脚本，都支持的共用函数
+		static int ssa_LeftShift(lua_State *L);
+		static int ssa_RightShift(lua_State *L);
+		static int ssa_AND(lua_State *L);
+		static int ssa_OR(lua_State *L);
+		static int ssa_XOR(lua_State *L);
+		static int ssa_NOT(lua_State *L);
+
+		static int ssa_GetByte(lua_State *L);
+		static int ssa_SetByte(lua_State *L);
+		static int ssa_ReverseByte(lua_State *L);
+
+		static int ssa_GetErrorMessage(lua_State *L);
+
+		static int ssa_Log(lua_State *L);
 	};
 }
 

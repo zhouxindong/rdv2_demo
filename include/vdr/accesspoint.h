@@ -4,10 +4,12 @@
 #define __SSA_VDR_ACCESSPOINT_H
 
 #include "export.h"
-#include "sensmsgs.h"
 #include "defs.h"
+#include "sensmsgs.h"
 #include "bytebuffer.h"
+#include "authoritymanage.h"
 #include "../base/value.h"
+#include <unordered_map>
 
 namespace ssa
 {
@@ -20,6 +22,13 @@ namespace ssa
 	*  4.群发消息；
 	*  5.发布订阅等。
 	*/
+
+	/**
+	*  WARNING：
+	*  在创建完成后,所有可能往外部发送数据，且需要等待回应消息的接口谨慎在消息回调进程中使用,因为消息队列的嵌套等待，可能会造成消息的拥塞。
+	*  如：Attach在方向指定为xmESyncDirection::xmESD_TOCLIENT时谨慎在与其对应的ConfigMSyncHandler、ConfigDPCHandler等配置的值更新回调消息处理线程中调用。
+	*/
+
 	class xmVDR_EXPORT xmAccessPoint
 	{
 	public:
@@ -72,16 +81,17 @@ namespace ssa
 		* 获取数据访问接口授权的节点。
 		* @return 授权节点的名字与节点信息的MAP表。
 		*/
-		std::map<std::string, xmNode>&    AuthorizedNodes();
+		std::unordered_map<std::string, xmNode>&    AuthorizedNodes();
 		/**
 		* 与节点授权类似，获取授权最终是获取对数据集的操作。此接口用于将数据访问接口依附在数据集上。
 		* 也可以通过Node的Authorize进行授权，推荐用法是通过Node进行授权。
 		* @param pVdr 是指被依附的VDR指针。
 		* @param strDataSetName 是指被依附的数据集的名字。
+		* @param isSyncValue 是指是否将VDR服务器端的数值同步到本地。
 		* @param nTry 是指被尝试多少次。
 		* @return 依附结果，true表示成功，false表示失败。
 		*/
-		virtual bool           Attach(xmVDR* pVdr, const char* strDataSetName = "", int nTry = 65535);
+		virtual bool           Attach(xmVDR* pVdr, const char* strDataSetName = "", bool isSyncValue = true, int nTry = 3);
 		/**
 		* 与节点授权类似，获取授权最终是获取对数据集的操作。此接口用于将数据访问接口依附在数据集上。
 		* 也可以通过Node的Authorize进行授权，推荐用法是通过Node进行授权。
@@ -89,18 +99,19 @@ namespace ssa
 		* @param nTry 是指被尝试多少次。
 		* @return 依附结果，true表示成功，false表示失败。
 		*/
-		virtual bool           Attach(const char* strDataSetName, int nTry = 65535);
+		virtual bool           Attach(const char* strDataSetName = "", bool isSyncValue = true, int nTry = 3);
 		/**
 		* 取消数据访问接口对数据集的依附。
 		* @param strDataSetName 是指被依附的数据集的名字。
 		* @return 取消依附结果，true表示成功，false表示失败。
 		*/
 		virtual bool           UnAttach(const char* strDataSetName);
+
 		/**
 		* 获取数据访问接口依附的数据集合信息。
 		* @return 依附的数据集合名字与数据集合信息的MAP表。
 		*/
-		std::map<std::string, xmDataSet>&  AttachedDataSets();
+		std::unordered_map<std::string, xmDataSet>&  AttachedDataSets();
 		/**
 		* 判断数据访问接口是否已经有效依附。
 		* @return 依附结果，true表示成功，false表示失败。
@@ -129,10 +140,25 @@ namespace ssa
 		virtual bool           GetToken(const char* strDataSetName = "");
 		/**
 		* 手动同步触发信号，分为两种情况，一种是需要上传新的数据，同时获取新的内存数据，一种情况仅仅获取服务器端的数据。
-		* @param am 同步方向，包括了仅向服务器，仅向客户端，双向或者广播。
+		* @param syncDir 同步方向，包括了仅向服务器，仅向客户端，双向或者广播。
 		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
 		*/
-		virtual int            SyncContent(xmESyncDirection am = xmESyncDirection::xmESD_TOSERVER);
+		virtual int            SyncContent(xmESyncDirection syncDir = xmESyncDirection::xmESD_TOSERVER);
+
+		/**
+		* 手动同步触发信号，分为两种情况，一种是需要上传新的数据，同时获取新的内存数据，一种情况仅仅获取服务器端的数据。
+		* @param strName 同步数据的名字或者数据集名字，仅支持到数据一级，不支持到属性，也不支持周期复位的数据。
+		* @param isData  如果同步的是数据为true，同步的是数据集为false。
+		* @param syncDir 同步方向，包括了仅向服务器，仅向客户端，双向或者广播。
+		* @return 结果，0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
+		*/
+		virtual int            SyncContent(const char* strName,bool isData = false,xmESyncDirection syncDir = xmESyncDirection::xmESD_TOSERVER);
+
+		/**
+		* 获取VDR最新的数据。
+		* @return 0表示成功，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
+		*/
+		virtual int            FetchContent();
 
 		/**
 		* 获取节点数目。
@@ -400,6 +426,39 @@ namespace ssa
 		}
 
 		/**
+		* 使用.号分割名字,xmValue写数值,此方法将单个数据直接发送出去
+		* 使用时可以只使用最顶层的数据名字，不支持按照周期自动复位的数据。
+		* @param strDataName 数据名字。
+		* @param bValue 以xmValue形式存储的参数值。
+		* @param flag  在结构化数据中名字路径分割符号，默认均为“.”。
+		* @return 结果，大于0表示成功，返回为所设置的字节数，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
+		*/
+		virtual int            RushValue(const char* strDataName, const xmValue& bValue, const char* flag = ".");
+		/**
+		* 使用.号分割名字,char*形式写数值,此方法将单个数据直接发送出去。
+		* 使用时可以只使用最顶层的数据名字，不支持按照周期自动复位的数据。
+		* @param strDataName 数据名字。
+		* @param bValue 以char*形式存储参数值的缓冲区地址。
+		* @param uLength 写数据值的大小，例如unsigned char为1个字节，int为4个字节，float为4个字节，以此类推。
+		* @param flag  在结构化数据中名字路径分割符号，默认均为“.”。
+		* @return 结果，大于0表示成功，返回为所设置的字节数，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
+		*/
+		virtual int            RushValue(const char* strDataName, const char* bValue, unsigned int uLength, const char* flag = ".");
+		/**
+		* 使用.号分割名字,模板形式写数值,此方法将单个数据直接发送出去。
+		* 使用时可以只使用最顶层的数据名字，不支持按照周期自动复位的数据。
+		* @param strDataName 数据名字。
+		* @param bValue 以模板形式存储参数值。
+		* @param flag  在结构化数据中名字路径分割符号，默认均为“.”。
+		* @return 结果，大于0表示成功，返回为所设置的字节数，-1表示失败，其他代码表示需要用户根据逻辑判断是否正确。
+		*/
+		template<class T>
+		int RushValue(const char* strDataName, const T& Value, const char* flag = ".")
+		{
+			return RushValue(strDataName, (char*)&Value, sizeof(T), flag);
+		}
+
+		/**
 		* 将公告信息向公告板粘贴。
 		* @param strSender 发送者。
 		* @param strTopic 公告主题。
@@ -471,8 +530,9 @@ namespace ssa
 		virtual int            GetSubscribeValue(int nSubscribeID, char* pVal, int& nLength);
 
 	private:
-		xmVDR*                 m_pAttchedVDR = 0;
+		xmVDR*                 m_pAttchedVDR;
 		xmEAPAuthority         m_eAPAType;
+		xmAuthoritySet         m_AuthoritySet;
 	};
 }
 

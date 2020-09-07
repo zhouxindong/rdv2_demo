@@ -2,10 +2,41 @@
 #define __SSA_BASE_WAITABLE_H
 #include "exceptions.h"
 #include "assertmsg.h"
-#include "singleton.h"
+//#include "singleton.h"
 
 namespace ssa
 {
+	/******************************************************************************/
+	/** @class xmUncopyable
+	@brief
+		实现一个不可复制的对象
+	@par 多线程安全
+		不适用
+	@par 示例
+		@par
+		@code
+			class myClass : private xmUncopyable
+			{
+			public:
+				myClass() : m_iParam(0){};
+			private:
+				int m_iParam;
+			};
+
+			myClass C1;		//	没问题
+			myClass C2(C1);	//	编译错误。
+		@endcode
+	*******************************************************************************/
+	class xmBASE_EXPORT xmUncopyable
+	{
+	protected:
+		xmUncopyable(){};
+		virtual ~xmUncopyable(){};
+	private:
+		xmUncopyable(const xmUncopyable&);
+		xmUncopyable& operator=(const xmUncopyable&);
+	};
+
 	class xmBASE_EXPORT xmWaitable : private xmUncopyable
 	{
 		friend class xmWaitSet;

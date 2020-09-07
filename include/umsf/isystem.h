@@ -59,7 +59,8 @@ namespace ssa
 
 
 
-#define xmISYSTEM_VERSION "V5.0.00_20190412"
+#define xmISYSTEM_VERSION "V5.0.01_20200814"
+	//#define xmISYSTEM_VERSION "V5.0.00_20190412"
 	class xmISystem
 	{
 	public:
@@ -77,11 +78,13 @@ namespace ssa
 
 		virtual void  ReadyToGo() { return; };
 
+		virtual void  SetClearFlag(bool bClear) { };
+		virtual bool  GetClearFlag() const { return true; };
 
 		//	dataPath：可以传入数据名称，也可以传入属性路径
 		//	dataValue：GetValue中，参数可以传入未初始化的xmValue
-		virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue) = 0;
-		virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue) = 0;
+		virtual xmRet GetValue(const xmString& dataPath, xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO) = 0;
+		virtual xmRet SetValue(const xmString& dataPath, const xmValue& dataValue, xmEDataCheckType eCheckType = DCT_AUTO) = 0;
 
 		//	获取仿真状态，仿真状态由ESimuState组合定义
 		virtual unsigned int GetSimulateState(void) const { return SSS_FINISH; };
@@ -93,6 +96,10 @@ namespace ssa
 		virtual size_t GetClickCount(void) const { return 0; };
 		//	获取当前系统时间，单位：取决与系统
 		virtual time_t GetSystemTime(void) const { return 0; };
+
+		//	强制同步本地与网络数据，strDataName如果为空，则同步全部数据
+		//	可指定同步方向，INPUT为网络数据同步到本地，OUTPUT为本地数据同步到网络，默认进行双向同步，
+		virtual xmRet SyncDate(const xmString& strDataName = xmString(), int nDirction = (IOT_INPUT | IOT_OUTPUT)) { return xmE_SUCCESS; };
 
 		//	打印仿真系统中所有注册的数据，或打印指定名称的数据
 		virtual xmString PrintData(const xmString& strDataName = NULL) { return xmString(); };
